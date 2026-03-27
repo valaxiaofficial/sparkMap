@@ -2,37 +2,73 @@ import React, { useEffect, useState } from 'react';
 import { 
   Sparkles, ArrowRight, BookOpen, Brain, Zap, Sun, Moon, History, 
   Plus, Search, Settings, PanelLeftClose, PanelLeftOpen,
-  LayoutGrid, FileText, Code2, User
+  LayoutGrid, FileText, Code2, User, Pin, PinOff
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import { PDFUploader } from './PDFUploader';
+import { DocUploader } from './DocUploader';
 import { generateConceptsFromTopic } from '../utils/geminiApi';
-import { getRecentMindmaps, loadMindmapFromNeo4j, saveWorkspaceToNeo4j } from '../utils/neo4jdb';
+import { 
+  getRecentMindmaps, loadMindmapFromNeo4j, saveWorkspaceToNeo4j, 
+  loadChatFromNeo4j 
+} from '../utils/neo4jdb';
 import { toast } from 'sonner';
 
 export function LaunchScreen() {
   const [prompt, setPrompt] = React.useState('');
   const [recents, setRecents] = useState<{topic: string, updatedAt: string}[]>([]);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [recentsSearch, setRecentsSearch] = useState('');
+  const [pinnedTopics, setPinnedTopics] = useState<string[]>([]);
   const { 
     setIsWorkspaceActive, isProcessing, setIsProcessing, 
     setNodes, setEdges, setInitialPrompt, addChatMessage, 
-    theme, toggleTheme 
+    setChatMessages, theme, toggleTheme 
   } = useStore();
 
-  // Load recents from Neo4j on mount
+  // Load recents and pins on mount
   useEffect(() => {
     getRecentMindmaps().then(setRecents);
+    
+    const savedPins = localStorage.getItem('sparkmap_pins');
+    if (savedPins) setPinnedTopics(JSON.parse(savedPins));
+
+    const handleResize = () => {
+      if (window.innerWidth < 1200) {
+        setIsSidebarCollapsed(true);
+      } else {
+        setIsSidebarCollapsed(false);
+      }
+    };
+
+    // Initial check
+    handleResize();
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  const togglePin = (topic: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const next = pinnedTopics.includes(topic)
+      ? pinnedTopics.filter(t => t !== topic)
+      : [topic, ...pinnedTopics];
+    setPinnedTopics(next);
+    localStorage.setItem('sparkmap_pins', JSON.stringify(next));
+  };
 
   const loadRecent = async (topic: string) => {
     setIsProcessing(true);
     try {
-      const data = await loadMindmapFromNeo4j(topic);
+      const [data, chatData] = await Promise.all([
+        loadMindmapFromNeo4j(topic),
+        loadChatFromNeo4j(topic)
+      ]);
+      
       if (data) {
         setInitialPrompt(topic);
         setNodes(data.nodes as any);
         setEdges(data.edges as any);
+        setChatMessages(chatData);
         setIsWorkspaceActive(true);
         toast.success(`Restored ${topic}`);
       }
@@ -75,7 +111,7 @@ export function LaunchScreen() {
         // 2. Create Hubs and Concepts in Vector Clusters
         result.hubs.forEach((hub: any, hubIdx: number) => {
           const hubAngle = (hubIdx / result.hubs.length) * 2 * Math.PI;
-          const hubRadius = 450;
+          const hubRadius = 400; // Halved from 800 to bring them closer
           const hubX = Math.cos(hubAngle) * hubRadius;
           const hubY = Math.sin(hubAngle) * hubRadius;
           const hubId = `hub-${hubIdx}-${timestamp}`;
@@ -94,9 +130,25 @@ export function LaunchScreen() {
             animated: true
           });
 
-          hub.concepts.forEach((concept: any, conceptIdx: number) => {
-            const conceptAngle = hubAngle + ((conceptIdx - (hub.concepts.length / 2)) * 0.25);
-            const conceptRadius = 180;
+          const numConcepts = hub.concepts?.length || 0;
+          hub.concepts?.forEach((concept: any, conceptIdx: number) => {
+            // Distribute them in outward radiating rings to prevent overlapping
+            const nodesPerRing = 5;
+            const ringIndex = Math.floor(conceptIdx / nodesPerRing);
+            const indexInRing = conceptIdx % nodesPerRing;
+            const actualNodesInThisRing = Math.min(nodesPerRing, numConcepts - ringIndex * nodesPerRing);
+            
+            const conceptRadius = 340 + (ringIndex * 220); // First ring is at 340px, next at 560px, etc.
+            
+            // Calculate minimum arc spread to ensure horizontal non-overlap (box width ~240px + padding)
+            const minArcLength = 280; 
+            const requiredArcSpread = actualNodesInThisRing > 1 ? ((actualNodesInThisRing - 1) * minArcLength) / conceptRadius : 0;
+            
+            const startAngle = hubAngle - (requiredArcSpread / 2);
+            const angleStep = actualNodesInThisRing > 1 ? requiredArcSpread / (actualNodesInThisRing - 1) : 0;
+            
+            const conceptAngle = actualNodesInThisRing === 1 ? hubAngle : startAngle + (indexInRing * angleStep);
+
             const conceptX = hubX + Math.cos(conceptAngle) * conceptRadius;
             const conceptY = hubY + Math.sin(conceptAngle) * conceptRadius;
             const conceptId = `concept-${hubIdx}-${conceptIdx}-${timestamp}`;
@@ -126,6 +178,10 @@ export function LaunchScreen() {
         
         // Save to Neo4j
         await saveWorkspaceToNeo4j(prompt, newNodes, newEdges);
+        
+        // Refresh recents list immediately so it shows in sidebar
+        const updatedRecents = await getRecentMindmaps();
+        setRecents(updatedRecents);
 
         addChatMessage({
           id: 'initial',
@@ -165,53 +221,81 @@ export function LaunchScreen() {
         </div>
 
         <div className="sidebar-nav">
-          <button className="sidebar-item sidebar-item-new" onClick={startNew}>
-            <Plus size={16} />
-            <span>New mindmap</span>
-          </button>
-
-          <button className="sidebar-item">
-            <Search size={16} />
-            <span>Search</span>
-          </button>
-
-          <button className="sidebar-item">
-            <Settings size={16} />
-            <span>Customize</span>
-          </button>
-
-          <div className="sidebar-section-title">Starred</div>
-          <div className="sidebar-item">
-            <span>Graph Architecture</span>
+          <div className="sidebar-search-container px-3 py-2">
+            <div className="relative group">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--sc-text-muted)] group-focus-within:text-[var(--sc-primary)] transition-colors" />
+              <input 
+                type="text" 
+                placeholder="Search recents..." 
+                value={recentsSearch}
+                onChange={(e) => setRecentsSearch(e.target.value)}
+                className="w-full bg-[var(--sc-surface-panel)] border border-[var(--sc-border-light)] rounded-[8px] py-1.5 pl-8 pr-3 text-[12px] outline-none focus:border-[var(--sc-primary-faint)] focus:ring-2 focus:ring-[var(--sc-primary-faint)] transition-all"
+              />
+            </div>
           </div>
 
-          <div className="sidebar-section-title">Recents</div>
-          {recents.length > 0 ? (
-            recents.map((item, i) => (
-              <button key={i} className="sidebar-item" onClick={() => loadRecent(item.topic)}>
-                <span className="truncate">{item.topic}</span>
-              </button>
-            ))
-          ) : (
-            <div style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--sc-text-muted)' }}>
-              No recent maps found
-            </div>
+          {/* Pinned Section */}
+          {pinnedTopics.length > 0 && (
+            <>
+              <div className="sidebar-section-title flex items-center gap-1.5">
+                <Pin size={10} className="text-[var(--sc-primary)]" />
+                Pinned
+              </div>
+              {pinnedTopics.map((topic, i) => (
+                <div key={`pin-${i}`} className="sidebar-item group pr-2" onClick={() => loadRecent(topic)}>
+                  <span className="truncate flex-1">{topic}</span>
+                  <button 
+                    onClick={(e) => togglePin(topic, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--sc-border-light)] rounded-md transition-all text-[var(--sc-primary)]"
+                  >
+                    <PinOff size={12} />
+                  </button>
+                </div>
+              ))}
+            </>
           )}
 
-          <div className="sidebar-section-title">Collections</div>
-          <button className="sidebar-item"><LayoutGrid size={16} /> Projects</button>
-          <button className="sidebar-item"><FileText size={16} /> Artifacts</button>
-          <button className="sidebar-item"><Code2 size={16} /> Code</button>
+          <div className="sidebar-section-title">Recents</div>
+          <div className="flex flex-col gap-0.5 custom-scrollbar max-h-[40vh] overflow-y-auto">
+            {recents
+              .filter(item => 
+                item.topic.toLowerCase().includes(recentsSearch.toLowerCase()) && 
+                !pinnedTopics.includes(item.topic)
+              )
+              .map((item, i) => (
+                <div key={`recent-${i}`} className="sidebar-item group pr-2" onClick={() => loadRecent(item.topic)}>
+                  <span className="truncate flex-1">{item.topic}</span>
+                  <button 
+                    onClick={(e) => togglePin(item.topic, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[var(--sc-border-light)] rounded-md transition-all"
+                  >
+                    <Pin size={12} className="text-[var(--sc-text-muted)] hover:text-[var(--sc-primary)]" />
+                  </button>
+                </div>
+              ))}
+            {recents.length === 0 && !recentsSearch && (
+              <div className="px-3 py-2 text-[11px] text-[var(--sc-text-muted)] italic">
+                Get started by creating your first map!
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="sidebar-footer">
-          <div className="user-profile">
-            <div className="user-avatar">X</div>
+          <div className="user-profile flex-1">
+            <div className="user-avatar bg-gradient-to-br from-[var(--sc-primary)] to-[var(--sc-purple)] text-white shadow-sm flex items-center justify-center font-bold">X</div>
             <div className="user-info">
               <span className="user-name">Xyaa</span>
-              <span className="user-plan">Pro Plan (Pixel OS)</span>
+              <span className="user-plan text-[10px] uppercase font-bold tracking-widest opacity-50">Pro Plan</span>
             </div>
           </div>
+          
+          <button 
+            className="p-2 rounded-lg hover:bg-[var(--sc-border-light)] transition-all text-[var(--sc-text-muted)] hover:text-[var(--sc-primary)]"
+            title="Settings"
+          >
+            <Settings size={20} />
+          </button>
         </div>
       </aside>
 
@@ -268,7 +352,7 @@ export function LaunchScreen() {
             />
             <button 
               type="submit" 
-              className="launch-submit"
+              className={`launch-submit ${prompt.trim().length > 0 ? 'animate-pulse-glow bg-[var(--sc-purple)] shadow-[0_0_15px_rgba(124,100,182,0.4)]' : ''}`}
               disabled={!prompt.trim() || isProcessing}
             >
               <ArrowRight className="w-5 h-5" />
@@ -280,7 +364,7 @@ export function LaunchScreen() {
           </div>
 
           <div className="flex justify-center mb-12">
-            <PDFUploader />
+            <DocUploader onUploadSuccess={() => getRecentMindmaps().then(setRecents)} />
           </div>
 
           <div className="launch-features">

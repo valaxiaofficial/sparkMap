@@ -23,8 +23,9 @@ function getColorIndex(label: string) {
   return hash % GROUP_COLORS.length;
 }
 
-export function GroupNode({ data, selected }: NodeProps<NodeData>) {
-  const label = data.clusterLabel || 'Concept Group';
+export function GroupNode({ data, selected }: NodeProps) {
+  const nodeData = data as NodeData;
+  const label = nodeData.clusterLabel || 'Concept Group';
   const color = GROUP_COLORS[getColorIndex(label)];
 
   return (
@@ -49,12 +50,12 @@ export function GroupNode({ data, selected }: NodeProps<NodeData>) {
       <Handle
         type="source"
         position={Position.Bottom}
-        style={{ opacity: 0, width: 8, height: 8 }}
+        className="rf-handle-port"
       />
       <Handle
         type="target"
         position={Position.Top}
-        style={{ opacity: 0, width: 8, height: 8 }}
+        className="rf-handle-port"
       />
     </div>
   );

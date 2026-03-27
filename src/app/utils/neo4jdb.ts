@@ -1,4 +1,4 @@
-import neo4j, { Driver, Record } from 'neo4j-driver';
+import neo4j, { Driver, Record, Session } from 'neo4j-driver';
 
 const NEO4J_URI = (import.meta as any).env?.VITE_NEO4J_URI || 'bolt://localhost:7687';
 const NEO4J_USER = (import.meta as any).env?.VITE_NEO4J_USER || 'neo4j';
@@ -6,6 +6,9 @@ const NEO4J_PASSWORD = (import.meta as any).env?.VITE_NEO4J_PASSWORD || 'passwor
 
 let driver: Driver | null = null;
 
+/**
+ * Singleton getter for the Neo4j Driver.
+ */
 export function getDriver() {
   if (!driver) {
     try {
@@ -21,19 +24,34 @@ export function getDriver() {
   return driver;
 }
 
-export async function checkNeo4jConnection(): Promise<boolean> {
+/**
+ * Reusable wrapper to handle Neo4j sessions.
+ * Manages driver checks, session lifecycle, and error logging.
+ */
+async function withSession<T>(callback: (session: Session) => Promise<T>): Promise<T | null> {
   const drv = getDriver();
-  if (!drv) return false;
+  if (!drv) return null;
+
+  const session = drv.session();
   try {
-    await drv.getServerInfo();
-    return true;
+    return await callback(session);
   } catch (error) {
-    console.warn('Could not connect to Neo4j.', error);
-    return false;
+    console.error('Neo4j Session Error:', error);
+    return null;
+  } finally {
+    await session.close();
   }
 }
 
-// Data structures for React Flow
+export async function checkNeo4jConnection(): Promise<boolean> {
+  const res = await withSession(async (session) => {
+    const info = await session.run('RETURN 1');
+    return !!info;
+  });
+  return !!res;
+}
+
+// Data structures
 export interface MinimalNode {
   id: string;
   type: string;
@@ -49,33 +67,31 @@ export interface MinimalEdge {
   animated?: boolean;
 }
 
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  relevantChunks?: string[];
+}
+
 /**
  * Saves a completely serialized mindmap layout to Neo4j.
- * It creates a Root :Mindmap node, then attaches all :UI_Node and :UI_Edge records to it
- * so that the layout state can be perfectly reconstructed.
  */
 export async function saveWorkspaceToNeo4j(topic: string, nodes: MinimalNode[], edges: MinimalEdge[]) {
-  const drv = getDriver();
-  if (!drv) return false;
-
-  const session = drv.session();
-  try {
-    // 1. Delete prior associated nodes for this topic so we can cleanly overwrite
+  return await withSession(async (session) => {
+    // 1. Delete prior associated nodes for this topic
     await session.run(`
-      MATCH (m:Mindmap {topic: $topic})-[r]->(n)
-      DETACH DELETE m, n
+      MATCH (m:Mindmap {topic: $topic})-[r:CONTAINS_NODE]->(n)
+      DETACH DELETE n
     `, { topic });
     
-    // We also might have left over unbound nodes, but for safety we only delete those bound to the mindmap.
-
     // 2. Create the Mindmap root
     await session.run(`
       MERGE (m:Mindmap {topic: $topic})
       SET m.updatedAt = datetime()
     `, { topic });
 
-    // 3. Serialize nodes and attach them
-    // We use UNWIND for batch inserts of nodes
+    // 3. Insert nodes
     const nodeDataList = nodes.map(n => ({
       id: n.id,
       type: n.type,
@@ -97,7 +113,7 @@ export async function saveWorkspaceToNeo4j(topic: string, nodes: MinimalNode[], 
       CREATE (m)-[:CONTAINS_NODE]->(n)
     `, { topic, nodeList: nodeDataList });
 
-    // 4. Serialize edges and attach them (we also recreate the native Graph relations)
+    // 4. Insert edges
     const edgeDataList = edges.map(e => ({
       id: e.id,
       source: e.source,
@@ -119,52 +135,33 @@ export async function saveWorkspaceToNeo4j(topic: string, nodes: MinimalNode[], 
     `, { topic, edgeList: edgeDataList });
 
     return true;
-  } catch (error) {
-    console.error('Failed to save to Neo4j', error);
-    return false;
-  } finally {
-    await session.close();
-  }
+  });
 }
 
 /**
- * Retrieves the list of recent active Mindmaps stored in Neo4j
+ * Retrieves the list of recent active Mindmaps.
  */
 export async function getRecentMindmaps(): Promise<{topic: string, updatedAt: string}[]> {
-  const drv = getDriver();
-  if (!drv) return [];
-
-  const session = drv.session();
-  try {
+  const res = await withSession(async (session) => {
     const result = await session.run(`
       MATCH (m:Mindmap)
       RETURN m.topic AS topic, toString(m.updatedAt) AS updatedAt
       ORDER BY m.updatedAt DESC
       LIMIT 15
     `);
-    
     return result.records.map((r: Record) => ({
       topic: r.get('topic'),
       updatedAt: r.get('updatedAt')
     }));
-  } catch (error) {
-    console.error('Failed to get recent mindmaps from Neo4j', error);
-    return [];
-  } finally {
-    await session.close();
-  }
+  });
+  return res || [];
 }
 
 /**
- * Hydrates a pure React Flow state (nodes, edges) by Topic from Neo4j
+ * Hydrates a pure React Flow state from Neo4j.
  */
 export async function loadMindmapFromNeo4j(topic: string): Promise<{nodes: MinimalNode[], edges: MinimalEdge[]} | null> {
-  const drv = getDriver();
-  if (!drv) return null;
-
-  const session = drv.session();
-  try {
-    // 1. Get nodes
+  return await withSession(async (session) => {
     const nodeRes = await session.run(`
       MATCH (m:Mindmap {topic: $topic})-[:CONTAINS_NODE]->(n:UI_Node)
       RETURN n
@@ -182,7 +179,6 @@ export async function loadMindmapFromNeo4j(topic: string): Promise<{nodes: Minim
       };
     });
 
-    // 2. Get edges
     const edgeRes = await session.run(`
       MATCH (m:Mindmap {topic: $topic})-[:CONTAINS_NODE]->(src:UI_Node)-[r:CONNECTED_TO]->(tgt:UI_Node)
       RETURN src.id AS source, tgt.id AS target, r
@@ -200,10 +196,64 @@ export async function loadMindmapFromNeo4j(topic: string): Promise<{nodes: Minim
     });
 
     return { nodes, edges };
-  } catch (error) {
-    console.error('Failed to load mindmap from Neo4j', error);
-    return null;
-  } finally {
-    await session.close();
-  }
+  });
+}
+
+/**
+ * Saves chat history for a given topic.
+ */
+export async function saveChatToNeo4j(topic: string, messages: ChatMessage[]) {
+  return await withSession(async (session) => {
+    await session.run(`
+      MATCH (m:Mindmap {topic: $topic})-[:HAS_MESSAGE]->(msg:Message)
+      DETACH DELETE msg
+    `, { topic });
+
+    const msgDataList = messages.map((m, idx) => ({
+      id: m.id,
+      role: m.role,
+      content: m.content,
+      order: idx,
+      chunks: m.relevantChunks ? JSON.stringify(m.relevantChunks) : '[]'
+    }));
+
+    await session.run(`
+      MATCH (m:Mindmap {topic: $topic})
+      UNWIND $msgList AS mData
+      CREATE (msg:Message {
+        id: mData.id,
+        role: mData.role,
+        content: mData.content,
+        order: mData.order,
+        chunks: mData.chunks
+      })
+      CREATE (m)-[:HAS_MESSAGE]->(msg)
+    `, { topic, msgList: msgDataList });
+
+    return true;
+  });
+}
+
+/**
+ * Loads chat history for a given topic.
+ */
+export async function loadChatFromNeo4j(topic: string): Promise<ChatMessage[]> {
+  const res = await withSession(async (session) => {
+    const result = await session.run(`
+      MATCH (m:Mindmap {topic: $topic})-[:HAS_MESSAGE]->(msg:Message)
+      RETURN msg
+      ORDER BY msg.order ASC
+    `, { topic });
+
+    return result.records.map((r: Record) => {
+      const p = r.get('msg').properties;
+      return {
+        id: p.id,
+        role: p.role,
+        content: p.content,
+        relevantChunks: JSON.parse(p.chunks || '[]')
+      };
+    });
+  });
+  return res || [];
 }

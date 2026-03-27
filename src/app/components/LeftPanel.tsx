@@ -1,11 +1,13 @@
 import React from 'react';
 import { useStore } from '../store/useStore';
-import { RefreshCw, Trash2, BookOpen, FileText, Tag } from 'lucide-react';
+import { RefreshCw, Trash2, BookOpen, FileText, Tag, PanelBottomClose, PanelBottomOpen } from 'lucide-react';
 import { generateFlashcard } from '../utils/geminiApi';
 import { toast } from 'sonner';
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels';
+import { GraphTreeView } from './GraphTreeView';
 
 export function LeftPanel() {
-  const { selectedNodeId, nodes, chunks, updateNode, deleteNode } = useStore();
+  const { selectedNodeId, nodes, chunks, updateNode, deleteNode, isProcessing } = useStore();
   const [isRegenerating, setIsRegenerating] = React.useState(false);
   const [editedLabel, setEditedLabel] = React.useState('');
 
@@ -46,207 +48,130 @@ export function LeftPanel() {
     }
   };
 
-  /* ── Empty state ── */
-  if (!selectedNode) {
-    return (
-      <div className="panel-empty animate-fade-in">
-        <div className="panel-empty-icon">
-          <BookOpen className="w-5 h-5" />
-        </div>
-        <div>
-          <p
-            style={{
-              fontSize: 13,
-              fontWeight: 500,
-              color: 'var(--sc-blue-text)',
-              marginBottom: 4,
-            }}
-          >
-            No node selected
-          </p>
-          <p style={{ fontSize: 12, color: 'var(--sc-text-muted)', lineHeight: 1.5 }}>
-            Click any concept node on the canvas to view and edit its properties.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 10, height: '100%' }}>
-      {/* ── Section: Node Properties ── */}
-      <div className="panel-section-label" style={{ marginTop: 2 }}>Node Properties</div>
-
-      <div className="property-card" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {/* Label row */}
-        <div>
-          <div
-            style={{
-              fontSize: 10,
-              fontWeight: 600,
-              color: 'var(--sc-text-secondary)',
-              textTransform: 'uppercase',
-              letterSpacing: '0.07em',
-              marginBottom: 6,
-              display: 'flex',
-              alignItems: 'center',
-              gap: 5,
-            }}
-          >
-            <Tag style={{ width: 10, height: 10 }} />
-            Label
-          </div>
-          <div style={{ display: 'flex', gap: 7 }}>
-            <input
-              type="text"
-              value={editedLabel}
-              onChange={e => setEditedLabel(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleUpdateLabel()}
-              className="property-input"
-              placeholder="Node label…"
-            />
-            <button
-              onClick={handleUpdateLabel}
-              className="btn-action"
-              style={{ padding: '5px 12px', flexShrink: 0 }}
-            >
-              Save
-            </button>
-          </div>
-        </div>
-
-        {/* Source text */}
-        {chunk && (
-          <div>
-            <div
-              style={{
-                fontSize: 10,
-                fontWeight: 600,
-                color: 'var(--sc-text-secondary)',
-                textTransform: 'uppercase',
-                letterSpacing: '0.07em',
-                marginBottom: 6,
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5,
-              }}
-            >
-              <FileText style={{ width: 10, height: 10 }} />
-              Source Text
-              {chunk.pageRef && (
-                <span
-                  style={{
-                    marginLeft: 'auto',
-                    fontWeight: 400,
-                    fontSize: 10,
-                    color: 'var(--sc-text-muted)',
-                    textTransform: 'none',
-                    letterSpacing: 0,
-                  }}
-                >
-                  Page {chunk.pageRef}
-                </span>
-              )}
-            </div>
-            <div
-              style={{
-                padding: '8px 10px',
-                background: 'var(--sc-surface)',
-                borderRadius: 8,
-                border: '1px solid var(--sc-border-light)',
-                fontSize: 12,
-                color: 'var(--sc-text-secondary)',
-                lineHeight: 1.65,
-                maxHeight: 120,
-                overflowY: 'auto',
-              }}
-            >
-              {chunk.text}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* ── Section: Flashcard ── */}
-      <div className="panel-section-label">Flashcard</div>
-
-      <div className="property-card">
-        {selectedNode.data.flashcard ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {/* Question */}
-            <div className="flashcard" style={{ borderLeftColor: 'var(--sc-blue)' }}>
-              <div
-                style={{
-                  fontSize: 9.5,
-                  fontWeight: 700,
-                  color: 'var(--sc-blue)',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.07em',
-                  marginBottom: 5,
-                }}
-              >
-                Question
+    <div className="h-full flex flex-col bg-[var(--sc-surface-panel)] border-r border-[var(--sc-border-light)] overflow-hidden">
+      <PanelGroup direction="vertical">
+        {/* TOP: Node Properties / Selection Details */}
+        <Panel defaultSize={55} minSize={20} className="flex flex-col bg-[var(--sc-canvas-bg)]">
+          {!selectedNode ? (
+            /* ── Selection Placeholder ── */
+            <div className="panel-empty animate-fade-in flex flex-col items-center justify-center h-full p-8 text-center bg-[var(--sc-canvas-bg)]">
+              <div className="panel-empty-icon mb-4">
+                <BookOpen className="w-10 h-10 text-[var(--sc-purple)] opacity-30" />
               </div>
-              <div>{selectedNode.data.flashcard.question}</div>
-            </div>
-
-            {/* Answer */}
-            <div className="flashcard" style={{ borderLeftColor: '#1db37e' }}>
-              <div
-                style={{
-                  fontSize: 9.5,
-                  fontWeight: 700,
-                  color: '#1db37e',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.07em',
-                  marginBottom: 5,
-                }}
-              >
-                Answer
+              <div>
+                <p className="text-[13px] font-bold text-[var(--sc-blue-text)] mb-1">
+                  Properties Observer
+                </p>
+                <p className="text-[11px] text-[var(--sc-text-muted)] leading-relaxed font-medium">
+                  Select any node in the tree or on the canvas to inspect its details and flashcards.
+                </p>
               </div>
-              <div>{selectedNode.data.flashcard.answer}</div>
             </div>
+          ) : (
+            /* ── Active Selection UI ── */
+            <div className="animate-fade-in custom-scrollbar p-5 overflow-y-auto h-full" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              {/* Properties Section */}
+              <div className="panel-section-label !mt-0">Node Properties</div>
+              
+              <div className="property-card flex flex-col gap-12 bg-[var(--sc-surface-alt)] p-4 rounded-[12px] border border-[var(--sc-border-light)]">
+                {/* ID/Type Row */}
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[9px] font-bold text-[var(--sc-text-muted)] tracking-widest uppercase">
+                    Ref: {selectedNode.id.split('-')[0]}...
+                  </span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-[var(--sc-border-light)] text-[var(--sc-text-muted)] uppercase font-bold">
+                    {selectedNode.data.isHub ? 'Hub' : selectedNode.data.isRoot ? 'Root' : 'Concept'}
+                  </span>
+                </div>
 
-            <button
-              onClick={handleRegenerateFlashcard}
-              disabled={isRegenerating}
-              className="btn-action"
-              style={{ width: '100%', marginTop: 2 }}
-            >
-              <RefreshCw
-                style={{ width: 12, height: 12 }}
-                className={isRegenerating ? 'animate-spin' : ''}
-              />
-              Regenerate Flashcard
-            </button>
+                <div>
+                  <div className="flex items-center gap-1.5 text-[10px] font-bold text-[var(--sc-text-secondary)] uppercase tracking-tight mb-2">
+                    <Tag size={12} className="text-[var(--sc-primary)]" />
+                    Instance Label
+                  </div>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={editedLabel}
+                      onChange={e => setEditedLabel(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && handleUpdateLabel()}
+                      className="property-input flex-1"
+                    />
+                    <button onClick={handleUpdateLabel} className="btn-action bg-[var(--sc-primary)] text-white hover:opacity-90">
+                      Save
+                    </button>
+                  </div>
+                </div>
+
+                {chunk && (
+                  <div className="mt-2 text-sm text-[var(--sc-text-secondary)]">
+                    <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-tight mb-2">
+                      <FileText size={12} className="text-[var(--sc-primary)]" />
+                      Document Source
+                    </div>
+                    <div className="p-3 bg-[var(--sc-canvas-bg)] rounded-[8px] border border-[var(--sc-border-light)] text-[11px] leading-relaxed max-h-[100px] overflow-y-auto italic">
+                      {chunk.text}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Flashcard Section */}
+              <div className="panel-section-label">Flashcard System</div>
+              <div className="property-card bg-[var(--sc-surface-alt)] p-4 rounded-[12px] border border-[var(--sc-border-light)]">
+                {selectedNode.data.flashcard ? (
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-1 border-l-2 border-[var(--sc-blue)] pl-3">
+                      <span className="text-[9px] font-black tracking-widest text-[var(--sc-blue)] uppercase">Question</span>
+                      <p className="text-[12px] leading-snug font-medium">{selectedNode.data.flashcard.question}</p>
+                    </div>
+                    <div className="flex flex-col gap-1 border-l-2 border-[var(--sc-green-deep)] pl-3">
+                      <span className="text-[9px] font-black tracking-widest text-[var(--sc-green-deep)] uppercase">Mentor Answer</span>
+                      <p className="text-[12px] leading-snug text-[var(--sc-text-secondary)]">{selectedNode.data.flashcard.answer}</p>
+                    </div>
+                    <button
+                      onClick={handleRegenerateFlashcard}
+                      disabled={isRegenerating}
+                      className="btn-action w-full mt-2"
+                    >
+                      <RefreshCw size={12} className={isRegenerating ? 'animate-spin' : ''} />
+                      Regenerate
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={handleRegenerateFlashcard} disabled={isRegenerating} className="btn-action w-full">
+                    <RefreshCw size={12} className={isRegenerating ? 'animate-spin' : ''} />
+                    {isProcessing ? 'Generating...' : 'Construct Flashcard'}
+                  </button>
+                )}
+              </div>
+
+              {/* Actions Section */}
+              <div className="mt-auto pt-6">
+                <button onClick={handleDelete} className="btn-action btn-danger w-full">
+                  <Trash2 size={13} />
+                  Purge Instance
+                </button>
+              </div>
+            </div>
+          )}
+        </Panel>
+
+        {/* Vertical Resize Handle */}
+        <PanelResizeHandle className="h-[4px] relative bg-[var(--sc-border-light)] hover:bg-[var(--sc-primary)] hover:opacity-50 transition-all cursor-row-resize" title="Drag to Resize Graph Tree">
+          <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 flex gap-1">
+             <div className="w-1 h-1 rounded-full bg-[var(--sc-text-muted)] opacity-50" />
+             <div className="w-1 h-1 rounded-full bg-[var(--sc-text-muted)] opacity-50" />
+             <div className="w-1 h-1 rounded-full bg-[var(--sc-text-muted)] opacity-50" />
           </div>
-        ) : (
-          <button
-            onClick={handleRegenerateFlashcard}
-            disabled={isRegenerating}
-            className="btn-action"
-            style={{ width: '100%' }}
-          >
-            <RefreshCw
-              style={{ width: 12, height: 12 }}
-              className={isRegenerating ? 'animate-spin' : ''}
-            />
-            {isRegenerating ? 'Generating…' : 'Generate Flashcard'}
-          </button>
-        )}
-      </div>
+        </PanelResizeHandle>
 
-      {/* ── Delete node ── */}
-      <div style={{ marginTop: 'auto', paddingTop: 8 }}>
-        <button
-          onClick={handleDelete}
-          className="btn-action btn-danger"
-          style={{ width: '100%' }}
-        >
-          <Trash2 style={{ width: 13, height: 13 }} />
-          Delete Node
-        </button>
-      </div>
+        {/* BOTTOM: Graph Tree Explorer */}
+        <Panel defaultSize={45} minSize={20} className="flex flex-col">
+          <GraphTreeView />
+        </Panel>
+      </PanelGroup>
     </div>
   );
 }

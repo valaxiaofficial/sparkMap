@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Node, Edge, NodeChange, EdgeChange, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
+import { Node, Edge, NodeChange, EdgeChange, Connection, applyNodeChanges, applyEdgeChanges, addEdge } from '@xyflow/react';
 
 export interface Chunk {
   id: string;
@@ -8,6 +8,13 @@ export interface Chunk {
   clusterId?: number;
   pageRef?: number;
 }
+
+export const SUPPORTED_MODELS = [
+  { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+  { id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash' },
+  { id: 'gemini-1.5-pro', name: 'Gemini 1.5 Pro' },
+  { id: 'gemini-exp-1206', name: 'Gemini Experimental' }
+];
 
 export interface Flashcard {
   question: string;
@@ -44,6 +51,7 @@ interface StoreState {
   setEdges: (edges: Edge[]) => void;
   onNodesChange: (changes: NodeChange<Node<NodeData>>[]) => void;
   onEdgesChange: (changes: EdgeChange[]) => void;
+  onConnect: (connection: Connection) => void;
   
   // Selected node
   selectedNodeId: string | null;
@@ -52,6 +60,7 @@ interface StoreState {
   // Chat
   chatMessages: ChatMessage[];
   addChatMessage: (message: ChatMessage) => void;
+  setChatMessages: (messages: ChatMessage[]) => void;
   clearChat: () => void;
   
   // Loading states
@@ -73,10 +82,18 @@ interface StoreState {
 
   // Delete node
   deleteNode: (nodeId: string) => void;
+  
+  // Model
+  selectedModel: string;
+  setSelectedModel: (model: string) => void;
 
   // Theme
   theme: 'dark' | 'light';
   toggleTheme: () => void;
+  // Physics Simulation
+  isSimulating: boolean;
+  setIsSimulating: (isSim: boolean) => void;
+  toggleSimulation: () => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -89,14 +106,16 @@ export const useStore = create<StoreState>((set) => ({
   setEdges: (edges) => set({ edges }),
   onNodesChange: (changes) => set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as Node<NodeData>[] })),
   onEdgesChange: (changes) => set((state) => ({ edges: applyEdgeChanges(changes, state.edges) })),
+  onConnect: (connection) => set((state) => ({ edges: addEdge({ ...connection, animated: true }, state.edges) })),
   
   selectedNodeId: null,
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
   
   chatMessages: [],
   addChatMessage: (message) => set((state) => ({
-    chatMessages: [...state.chatMessages, message].slice(-10) // Keep last 10 messages
+    chatMessages: [...state.chatMessages, message].slice(-15) // Increased limit slightly
   })),
+  setChatMessages: (chatMessages) => set({ chatMessages }),
   clearChat: () => set({ chatMessages: [] }),
   
   isProcessing: false,
@@ -109,6 +128,9 @@ export const useStore = create<StoreState>((set) => ({
   setIsWorkspaceActive: (isActive) => set({ isWorkspaceActive: isActive }),
   initialPrompt: '',
   setInitialPrompt: (prompt) => set({ initialPrompt: prompt }),
+
+  selectedModel: 'gemini-2.5-flash',
+  setSelectedModel: (selectedModel) => set({ selectedModel }),
 
   theme: 'dark',
   toggleTheme: () => set((state) => {
@@ -129,5 +151,9 @@ export const useStore = create<StoreState>((set) => ({
     nodes: state.nodes.filter((node) => node.id !== nodeId),
     edges: state.edges.filter((edge) => edge.source !== nodeId && edge.target !== nodeId),
     selectedNodeId: state.selectedNodeId === nodeId ? null : state.selectedNodeId
-  }))
+  })),
+
+  isSimulating: false,
+  setIsSimulating: (isSim) => set({ isSimulating: isSim }),
+  toggleSimulation: () => set((state) => ({ isSimulating: !state.isSimulating }))
 }));

@@ -16,6 +16,7 @@ import { useStore, NodeData } from '../store/useStore';
 import { ConceptNode } from './ConceptNode';
 import { GroupNode } from './GroupNode';
 import { PDFUploader } from './PDFUploader';
+import { usePhysicsSimulation } from '../hooks/usePhysicsSimulation';
 import { Sparkles, Upload, Plus, BookOpen, Lightbulb, StickyNote, X } from 'lucide-react';
 import { generateFlashcard } from '../utils/geminiApi';
 import { toast } from 'sonner';
@@ -35,6 +36,15 @@ function ViewportTracker({ onRecenter }: { onRecenter: () => void }) {
         title="Recalibrate View (Focus Center)"
       >
         <Sparkles className="w-3.5 h-3.5" />
+      </button>
+      <button
+        className={`canvas-control-btn ${useStore(s => s.isSimulating) ? 'text-[var(--sc-primary)] bg-[var(--sc-primary-faint)]' : ''}`}
+        onClick={useStore(s => s.toggleSimulation)}
+        title={useStore(s => s.isSimulating) ? 'Pause Physics Simulation' : 'Resume Physics Simulation'}
+      >
+        <div className="text-[10px] font-bold uppercase tracking-wider px-1">
+          {useStore(s => s.isSimulating) ? 'Pause' : 'Play'}
+        </div>
       </button>
       <div className="canvas-scale-indicator">
         {Math.round(zoom * 100)}%
@@ -74,6 +84,9 @@ interface QuickCreateModal {
 function CanvasInner() {
   const { nodes, edges, onNodesChange, onEdgesChange, setSelectedNodeId, setNodes, selectedNodeId } = useStore();
   const { screenToFlowPosition, fitView } = useReactFlow();
+  
+  // Attach physics simulation (starts paused by default)
+  usePhysicsSimulation();
 
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
   const [modal, setModal] = useState<QuickCreateModal | null>(null);
@@ -208,6 +221,7 @@ function CanvasInner() {
         edges={styledEdges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
+        onConnect={useStore((state) => state.onConnect)}
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         onPaneContextMenu={onPaneContextMenu}
@@ -283,99 +297,108 @@ function CanvasInner() {
 
       {/* ── Quick Create Modal ── */}
       {modal && (
-        <div className="canvas-modal-backdrop" onClick={() => setModal(null)}>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setModal(null)}>
           <div
-            className="canvas-modal"
+            className="w-[400px] max-w-[90vw] bg-[var(--sc-surface-card)] rounded-[16px] shadow-2xl border border-[var(--sc-border)] overflow-hidden flex flex-col animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
             onKeyDown={onKeyDown}
           >
             {/* Header */}
-            <div className="canvas-modal-header">
-              <div className="canvas-modal-icon">
-                {modal.mode === 'flashcard'
-                  ? <BookOpen className="w-4 h-4" />
-                  : modal.mode === 'note'
-                  ? <StickyNote className="w-4 h-4" />
-                  : <Plus className="w-4 h-4" />}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[var(--sc-border-light)] bg-[var(--sc-surface-alt)]">
+              <div className="flex items-center gap-2.5">
+                <div className="flex items-center justify-center w-8 h-8 rounded-[8px] bg-[var(--sc-primary-light)] text-[var(--sc-primary)]">
+                  {modal.mode === 'flashcard'
+                    ? <BookOpen className="w-4 h-4" />
+                    : modal.mode === 'note'
+                    ? <StickyNote className="w-4 h-4" />
+                    : <Plus className="w-4 h-4" />}
+                </div>
+                <h3 className="text-[14px] font-bold text-[var(--sc-text-primary)] m-0">
+                  {modal.mode === 'flashcard' ? 'New Flashcard Node'
+                    : modal.mode === 'note' ? 'Quick Note'
+                    : 'New Concept Node'}
+                </h3>
               </div>
-              <h3 className="canvas-modal-title">
-                {modal.mode === 'flashcard' ? 'New Flashcard Node'
-                  : modal.mode === 'note' ? 'Quick Note'
-                  : 'New Concept Node'}
-              </h3>
-              <button className="canvas-modal-close" onClick={() => setModal(null)}>
+              <button 
+                className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-[var(--sc-border-light)] text-[var(--sc-text-muted)] hover:text-[var(--sc-text-primary)] transition-colors" 
+                onClick={() => setModal(null)}
+              >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            {/* Label */}
-            <div className="canvas-modal-field">
-              <label className="canvas-modal-label">
-                {modal.mode === 'note' ? 'Note content' : 'Concept label'}
-              </label>
-              <input
-                ref={inputRef}
-                className="canvas-modal-input"
-                placeholder={
-                  modal.mode === 'note' ? 'Write your note…'
-                  : modal.mode === 'flashcard' ? 'e.g. Photosynthesis'
-                  : 'e.g. Neural Networks'
-                }
-                value={labelInput}
-                onChange={(e) => setLabelInput(e.target.value)}
-              />
-            </div>
-
-            {/* Description / source text */}
-            {modal.mode !== 'note' && (
-              <div className="canvas-modal-field">
-                <label className="canvas-modal-label">
-                  {modal.mode === 'flashcard'
-                    ? 'Source text (used to generate flashcard)'
-                    : 'Description (optional)'}
+            <div className="p-5 flex flex-col gap-4">
+              {/* Label */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[11px] font-bold text-[var(--sc-text-secondary)] uppercase tracking-wider">
+                  {modal.mode === 'note' ? 'Note content' : 'Concept label'}
                 </label>
-                <textarea
-                  className="canvas-modal-textarea"
+                <input
+                  ref={inputRef}
+                  className="w-full px-3 py-2.5 bg-[var(--sc-canvas-bg)] border border-[var(--sc-border)] rounded-[8px] text-[13px] text-[var(--sc-text-primary)] placeholder:text-[var(--sc-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--sc-primary-glow)] focus:border-[var(--sc-primary)] transition-all"
                   placeholder={
-                    modal.mode === 'flashcard'
-                      ? 'Paste the text you want to turn into a flashcard…'
-                      : 'Brief description of this concept…'
+                    modal.mode === 'note' ? 'Write your note…'
+                    : modal.mode === 'flashcard' ? 'e.g. Photosynthesis'
+                    : 'e.g. Neural Networks'
                   }
-                  value={descInput}
-                  onChange={(e) => setDescInput(e.target.value)}
-                  rows={3}
+                  value={labelInput}
+                  onChange={(e) => setLabelInput(e.target.value)}
                 />
               </div>
-            )}
 
-            {/* Actions */}
-            <div className="canvas-modal-actions">
-              <button
-                className="canvas-modal-cancel"
-                onClick={() => setModal(null)}
-              >
-                Cancel
-              </button>
-              <button
-                className="canvas-modal-create"
-                onClick={createNode}
-                disabled={!labelInput.trim() || isGenerating}
-              >
-                {isGenerating ? (
-                  <>
-                    <span className="canvas-modal-spinner" />
-                    Generating…
-                  </>
-                ) : (
-                  <>
-                    <Plus className="w-3.5 h-3.5" />
-                    {modal.mode === 'flashcard' ? 'Create & generate' : 'Create node'}
-                  </>
-                )}
-              </button>
+              {/* Description / source text */}
+              {modal.mode !== 'note' && (
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-[11px] font-bold text-[var(--sc-text-secondary)] uppercase tracking-wider">
+                    {modal.mode === 'flashcard'
+                      ? 'Source text (used to generate flashcard)'
+                      : 'Description (optional)'}
+                  </label>
+                  <textarea
+                    className="w-full px-3 py-2.5 bg-[var(--sc-canvas-bg)] border border-[var(--sc-border)] rounded-[8px] text-[13px] text-[var(--sc-text-primary)] placeholder:text-[var(--sc-text-muted)] focus:outline-none focus:ring-2 focus:ring-[var(--sc-primary-glow)] focus:border-[var(--sc-primary)] transition-all resize-none"
+                    placeholder={
+                      modal.mode === 'flashcard'
+                        ? 'Paste the text you want to turn into a flashcard…'
+                        : 'Brief description of this concept…'
+                    }
+                    value={descInput}
+                    onChange={(e) => setDescInput(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              )}
             </div>
 
-            <p className="canvas-modal-hint">Press Enter to create · Esc to cancel</p>
+            {/* Actions */}
+            <div className="flex items-center justify-between px-5 py-4 border-t border-[var(--sc-border-light)] bg-[var(--sc-surface-alt)]">
+              <p className="text-[10px] text-[var(--sc-text-muted)]">Press <strong className="font-semibold text-[var(--sc-text-secondary)]">Enter</strong> to create · <strong className="font-semibold text-[var(--sc-text-secondary)]">Esc</strong> to cancel</p>
+              
+              <div className="flex items-center gap-2">
+                <button
+                  className="px-3 py-1.5 text-[12px] font-bold text-[var(--sc-text-secondary)] hover:text-[var(--sc-text-primary)] hover:bg-[var(--sc-border-light)] rounded-[6px] transition-colors"
+                  onClick={() => setModal(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  className="flex items-center gap-1.5 px-4 py-1.5 text-[12px] font-bold text-white bg-[var(--sc-primary)] hover:bg-[var(--sc-primary-hover)] rounded-[6px] shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={createNode}
+                  disabled={!labelInput.trim() || isGenerating}
+                >
+                  {isGenerating ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Generating…
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="w-3.5 h-3.5" />
+                      {modal.mode === 'flashcard' ? 'Create & generate' : 'Create node'}
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

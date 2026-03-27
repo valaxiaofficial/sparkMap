@@ -9,8 +9,9 @@ export function ConceptNode({ data, selected }: NodeProps) {
   const [isHovered, setIsHovered] = useState(false);
 
   // Zoom thresholds for semantic states
-  const isDot = zoom < 0.45;
-  const isBox = zoom >= 0.60;
+  const isImportantNode = nodeData.isRoot || nodeData.isHub;
+  const isDot = isImportantNode ? zoom < 0.25 : zoom < 0.45;
+  const isBox = isImportantNode ? zoom >= 0.25 : zoom >= 0.60;
   // Determine if we should show the "Detailed" view (either high zoom or hover)
   const showFull = isHovered || zoom > 1.2;
 
@@ -33,7 +34,7 @@ export function ConceptNode({ data, selected }: NodeProps) {
       <Handle
         type="target"
         position={Position.Top}
-        className="rf-handle-hidden"
+        className="rf-handle-port"
       />
 
       <div className="node-content-wrapper">
@@ -91,7 +92,7 @@ export function ConceptNode({ data, selected }: NodeProps) {
       <Handle
         type="source"
         position={Position.Bottom}
-        className="rf-handle-hidden"
+        className="rf-handle-port"
       />
     </div>
   );

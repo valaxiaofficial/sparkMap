@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { CanvasPanel } from './components/CanvasPanel';
 import { LeftPanel } from './components/LeftPanel';
 import { RightPanel } from './components/RightPanel';
-import { PDFUploader } from './components/PDFUploader';
+import { DocUploader } from './components/DocUploader';
 import { ExportButtons } from './components/ExportButtons';
 import { LoadingOverlay } from './components/LoadingOverlay';
 import { Sparkles, Layers, Sun, Moon, PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
@@ -38,15 +38,15 @@ export default function App() {
   const toggleLeft = () => {
     const p = leftPanelRef.current;
     if (!p) return;
-    if (leftOpen) { p.collapse(); setLeftOpen(false); }
-    else { p.expand(); setLeftOpen(true); }
+    if (p.isCollapsed()) { p.expand(); }
+    else { p.collapse(); }
   };
 
   const toggleRight = () => {
     const p = rightPanelRef.current;
     if (!p) return;
-    if (rightOpen) { p.collapse(); setRightOpen(false); }
-    else { p.expand(); setRightOpen(true); }
+    if (p.isCollapsed()) { p.expand(); }
+    else { p.collapse(); }
   };
 
   return (
@@ -70,24 +70,16 @@ export default function App() {
           <div className="header-divider" />
 
           {/* Status / info tag */}
-          {nodes.length > 0 ? (
-            <div className="header-tag">
-              <Layers className="w-3 h-3" />
-              {nodes.filter(n => !n.data.isGroup).length} concepts
-            </div>
-          ) : (
-            <div className="header-tag">
-              <span>Personal Space</span>
-            </div>
-          )}
+          <div className="header-tag">
+            <Layers className="w-3 h-3" />
+            <span>Workspace</span>
+          </div>
         </div>
 
         {/* Right actions */}
         <div className="header-actions">
-          <PDFUploader />
-          <div style={{ width: 1, height: 20, background: 'var(--sc-border-light)', flexShrink: 0 }} />
           <ExportButtons />
-          <div style={{ width: 1, height: 20, background: 'var(--sc-border-light)', flexShrink: 0 }} />
+          <div style={{ width: 1, height: 20, background: 'var(--sc-border-light)', flexShrink: 0, marginLeft: 8 }} />
           {/* Theme toggle */}
           <button
             className="theme-toggle"
@@ -121,7 +113,7 @@ export default function App() {
             ref={leftPanelRef}
             collapsible
             defaultSize={20}
-            minSize={15}
+            minSize={0} // Allows complete collapse
             maxSize={30}
             onCollapse={() => setLeftOpen(false)}
             onExpand={() => setLeftOpen(true)}
@@ -143,8 +135,8 @@ export default function App() {
           <Panel
             ref={rightPanelRef}
             collapsible
-            defaultSize={20}
-            minSize={15}
+            defaultSize={22}
+            minSize={0} // Allows complete collapse
             maxSize={35}
             onCollapse={() => setRightOpen(false)}
             onExpand={() => setRightOpen(true)}
