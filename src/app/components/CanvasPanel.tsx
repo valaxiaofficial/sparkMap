@@ -3,8 +3,6 @@ import {
   ReactFlow,
   Background,
   Controls,
-  useNodesState,
-  useEdgesState,
   NodeTypes,
   Node,
   Edge,
@@ -48,26 +46,7 @@ function BackgroundLayer() {
 }
 
 export function CanvasPanel() {
-  const { nodes, edges, setNodes, setEdges, setSelectedNodeId } = useStore();
-
-  const [localNodes, setLocalNodes, onNodesChange] = useNodesState(nodes);
-  const [localEdges, setLocalEdges, onEdgesChange] = useEdgesState(edges);
-
-  React.useEffect(() => {
-    setLocalNodes(nodes);
-  }, [nodes, setLocalNodes]);
-
-  React.useEffect(() => {
-    setLocalEdges(edges);
-  }, [edges, setLocalEdges]);
-
-  React.useEffect(() => {
-    setNodes(localNodes);
-  }, [localNodes, setNodes]);
-
-  React.useEffect(() => {
-    setEdges(localEdges);
-  }, [localEdges, setEdges]);
+  const { nodes, edges, onNodesChange, onEdgesChange, setSelectedNodeId } = useStore();
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node<NodeData>) => {
     if (!node.data.isGroup) {
@@ -78,8 +57,8 @@ export function CanvasPanel() {
   return (
     <div className="w-full h-full relative">
       <ReactFlow
-        nodes={localNodes}
-        edges={localEdges}
+        nodes={nodes}
+        edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onNodeClick={onNodeClick}

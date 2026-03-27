@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Node, Edge } from '@xyflow/react';
+import { Node, Edge, NodeChange, EdgeChange, applyNodeChanges, applyEdgeChanges } from '@xyflow/react';
 
 export interface Chunk {
   id: string;
@@ -39,6 +39,8 @@ interface StoreState {
   edges: Edge[];
   setNodes: (nodes: Node<NodeData>[]) => void;
   setEdges: (edges: Edge[]) => void;
+  onNodesChange: (changes: NodeChange<Node<NodeData>>[]) => void;
+  onEdgesChange: (changes: EdgeChange[]) => void;
   
   // Selected node
   selectedNodeId: string | null;
@@ -78,6 +80,8 @@ export const useStore = create<StoreState>((set) => ({
   edges: [],
   setNodes: (nodes) => set({ nodes }),
   setEdges: (edges) => set({ edges }),
+  onNodesChange: (changes) => set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as Node<NodeData>[] })),
+  onEdgesChange: (changes) => set((state) => ({ edges: applyEdgeChanges(changes, state.edges) })),
   
   selectedNodeId: null,
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
