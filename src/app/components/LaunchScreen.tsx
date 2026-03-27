@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react';
-import { Sparkles, ArrowRight, BookOpen, Brain, Zap, Sun, Moon, History, ChevronRight } from 'lucide-react';
+import React, { useEffect } from 'react';
+import { Sparkles, ArrowRight, BookOpen, Brain, Zap, Sun, Moon, History } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { PDFUploader } from './PDFUploader';
 import { generateConceptsFromTopic } from '../utils/geminiApi';
@@ -8,35 +8,11 @@ import { toast } from 'sonner';
 
 export function LaunchScreen() {
   const [prompt, setPrompt] = React.useState('');
-  const [recents, setRecents] = useState<{topic: string, updatedAt: string}[]>([]);
   const { 
     setIsWorkspaceActive, isProcessing, setIsProcessing, 
     setNodes, setEdges, setInitialPrompt, addChatMessage, 
     theme, toggleTheme 
   } = useStore();
-
-  // Load recents from Neo4j on mount
-  useEffect(() => {
-    getRecentMindmaps().then(setRecents);
-  }, []);
-
-  const loadRecent = async (topic: string) => {
-    setIsProcessing(true);
-    try {
-      const data = await loadMindmapFromNeo4j(topic);
-      if (data) {
-        setInitialPrompt(topic);
-        setNodes(data.nodes as any);
-        setEdges(data.edges as any);
-        setIsWorkspaceActive(true);
-        toast.success(`Restored ${topic}`);
-      }
-    } catch (err) {
-      toast.error("Failed to load map.");
-    } finally {
-      setIsProcessing(false);
-    }
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -135,29 +111,6 @@ export function LaunchScreen() {
 
   return (
     <div className="launch-screen">
-      {/* Sidebar: Recents */}
-      <aside className="launch-sidebar animate-in slide-in-from-left duration-500">
-        <div className="launch-sidebar-header">
-           <History className="w-4 h-4 text-primary" />
-           <span>Recent Mindmaps</span>
-        </div>
-        <div className="launch-sidebar-list">
-          {recents.length > 0 ? (
-            recents.map((item, i) => (
-              <button key={i} className="recent-item-btn" onClick={() => loadRecent(item.topic)}>
-                 <div className="recent-item-info">
-                   <strong className="recent-item-topic">{item.topic}</strong>
-                   <span className="recent-item-date">{new Date(item.updatedAt).toLocaleDateString()}</span>
-                 </div>
-                 <ChevronRight className="w-3.5 h-3.5 opacity-40 ml-auto" />
-              </button>
-            ))
-          ) : (
-            <div className="recent-empty">No recent maps found</div>
-          )}
-        </div>
-      </aside>
-
       {/* Main Content */}
       <div className="launch-main">
         {/* Theme toggle — top right */}

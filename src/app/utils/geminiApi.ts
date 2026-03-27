@@ -122,7 +122,7 @@ export async function chatWithRAG(
   }
 }
 
-export async function generateConceptsFromTopic(topic: string): Promise<any[]> {
+export async function generateConceptsFromTopic(topic: string): Promise<any> {
   try {
     // Generate Root Node, Sub-Title Hubs, and Flashcard Concepts formatted for Neo4j relationships.
     const prompt = `You are a study workspace generator. Based on the topic "${topic}", create a structured knowledge map containing:
