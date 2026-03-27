@@ -1,4 +1,4 @@
-import { Chunk, Flashcard } from '../store/useStore';
+import { Chunk, Flashcard, ChatMessage } from '../store/useStore';
 import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 import { GoogleGenAI } from '@google/genai';
 
@@ -142,7 +142,12 @@ export async function generateFlashcard(chunkText: string): Promise<Flashcard> {
   }
 }
 
-export async function chatWithRAG(query: string, contextChunks: Chunk[]): Promise<string> {
+export async function chatWithRAG(
+  query: string,
+  contextChunks: Chunk[],
+  topic?: string,
+  history?: ChatMessage[]
+): Promise<string> {
   try {
     const response = await fetch(`${API_BASE}/chat`, {
       method: 'POST',
@@ -152,7 +157,9 @@ export async function chatWithRAG(query: string, contextChunks: Chunk[]): Promis
       },
       body: JSON.stringify({
         query,
-        context: contextChunks.map(c => c.text)
+        context: contextChunks.map(c => c.text),
+        topic,
+        history: history?.map(m => ({ role: m.role, content: m.content }))
       })
     });
 
@@ -166,7 +173,35 @@ export async function chatWithRAG(query: string, contextChunks: Chunk[]): Promis
     console.warn('Backend API failed, falling back to local Gemini SDK for chatWithRAG', error);
     try {
       const contextText = contextChunks.map(c => c.text).join('\n\n');
-      const prompt = `You are an elite academic mentor and study assistant. Your goal is to help the user master complex topics.\n- Answer the student's question accurately.\n- Use the provided context from their materials if available.\n- CRITICALLY: Supplement with your own high-level expert knowledge if the context is incomplete or if a broader explanation is needed.\n- Maintain an encouraging, sophisticated, and scholarly tone.\n\nContext from study materials:\n${contextText.slice(0, 4000)}\n\nStudent question: ${query}\n\nExpert Response:`;
+
+      // Build conversation history string so the model remembers prior turns
+      const historyText = history && history.length > 0
+        ? history
+            .map(m => `${m.role === 'user' ? 'Student' : 'Mentor'}: ${m.content}`)
+            .join('\n')
+        : '';
+
+      const topicLine = topic ? `The student is currently studying: **${topic}**.` : '';
+
+      const prompt = [
+        'You are an elite academic mentor and study assistant. Your goal is to help the student master the topic they are studying.',
+        '- Always stay focused on the topic and the student\'s materials.',
+        '- Use the provided context from their study materials when relevant.',
+        '- Supplement with your own expert knowledge when needed.',
+        '- Maintain an encouraging, sophisticated, and scholarly tone.',
+        '- NEVER ask the student what topic they are studying — you already know it from context.',
+        '',
+        topicLine,
+        '',
+        contextText ? `Context from study materials:\n${contextText.slice(0, 3000)}` : '',
+        '',
+        historyText ? `Conversation so far:\n${historyText}` : '',
+        '',
+        `Student: ${query}`,
+        '',
+        'Mentor:'
+      ].filter(Boolean).join('\n');
+
       return (await generateText(prompt)).trim();
     } catch (fallbackError) {
       console.error('Local fallback chat error:', fallbackError);

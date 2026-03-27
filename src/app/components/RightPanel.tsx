@@ -6,7 +6,7 @@ import { findTopKSimilar } from '../utils/clustering';
 import { toast } from 'sonner';
 
 export function RightPanel() {
-  const { chatMessages, addChatMessage, chunks, nodes, setNodes } = useStore();
+  const { chatMessages, addChatMessage, chunks, nodes, setNodes, initialPrompt } = useStore();
   const [input, setInput] = React.useState('');
   const [isLoading, setIsLoading] = React.useState(false);
   const scrollRef = React.useRef<HTMLDivElement>(null);
@@ -37,7 +37,14 @@ export function RightPanel() {
     try {
       const queryEmbedding = await embedQuery(userMessage.content);
       const relevantChunks = findTopKSimilar(queryEmbedding, chunks, 3);
-      const answer = await chatWithRAG(userMessage.content, relevantChunks);
+      // Pass the workspace topic and full conversation history so the AI
+      // always knows what subject is being studied and remembers prior turns.
+      const answer = await chatWithRAG(
+        userMessage.content,
+        relevantChunks,
+        initialPrompt || undefined,
+        chatMessages  // full history (before this message was added)
+      );
       
       const assistantMessage = {
         id: `msg-${Date.now()}-ai`,
