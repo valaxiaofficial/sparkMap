@@ -1,0 +1,366 @@
+
+Color Tokens (copy into your tailwind.config.js or CSS variables)
+css:root {
+  /* Primary surface */
+  --sc-surface:          #f3f7fc;   /* light canvas bg — canvas-light-gray */
+  --sc-surface-panel:    #eff4fb;   /* panel bg — canvas-page-button-background */
+  --sc-surface-card:     #ffffff;   /* card/node bg */
+  --sc-surface-hover:    #dbe4f0;   /* hover state on items */
+
+  /* Accent / Brand */
+  --sc-purple:           #7c64b6;   /* primary accent — canvas-purple */
+  --sc-purple-hover:     #8670bc;
+  --sc-blue:             #4966ff;   /* secondary accent */
+  --sc-blue-text:        #243351;   /* primary text — canvas-blue-text */
+
+  /* Text */
+  --sc-text-primary:     #243351;
+  --sc-text-secondary:   rgba(36, 51, 81, 0.65);  /* canvas-inactive-text */
+  --sc-text-muted:       #777777;
+
+  /* Borders */
+  --sc-border:           #c4d4ec;   /* canvas-blue-gray */
+  --sc-border-light:     #e3e8ef;   /* canvas-darker-gray */
+
+  /* Node states */
+  --sc-node-selected:    #7c64b6;   /* border when node selected */
+  --sc-node-outdated:    #ffa4a4;   /* canvas-outdated */
+
+  /* Canvas background */
+  --sc-canvas-bg:        #e3e3e3;   /* main-canvas-container bg */
+}
+
+Typography
+css/* Font stack — match Mixboard exactly */
+font-family: "Google Sans Flex", "Google Sans", Arial, sans-serif;
+
+/* Title / heading */
+font-size: 14px; font-weight: 500; color: var(--sc-blue-text);
+
+/* Body / node labels */
+font-size: 13px; font-weight: 400; color: var(--sc-text-primary);
+
+/* Muted / secondary */
+font-size: 12px; color: var(--sc-text-secondary);
+
+/* Fallback if Google Sans unavailable — use Inter */
+font-family: "Inter", system-ui, sans-serif;
+
+Three-Panel Layout Shell
+css/* Root app shell */
+.app-shell {
+  display: grid;
+  grid-template-columns: 260px 1fr 300px;
+  grid-template-rows: 56px 1fr;
+  height: 100vh;
+  overflow: hidden;
+  background: var(--sc-canvas-bg);
+}
+
+/* Top header bar */
+.header {
+  grid-column: 1 / -1;
+  background: var(--sc-surface);
+  border-bottom: 1px solid var(--sc-border-light);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 56px;
+  z-index: 800;
+  min-width: fit-content;
+}
+
+/* Left panel */
+.panel-left {
+  background: var(--sc-surface-panel);  /* #eff4fb */
+  border-right: 1px solid var(--sc-border-light);
+  overflow-y: auto;
+  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Center canvas */
+.panel-canvas {
+  background: var(--sc-canvas-bg);     /* #e3e3e3 */
+  position: relative;
+  overflow: hidden;
+}
+
+/* Right panel */
+.panel-right {
+  background: var(--sc-surface-panel);  /* #eff4fb */
+  border-left: 1px solid var(--sc-border-light);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+Left Panel — Node Edit Properties
+css/* Section label inside left panel */
+.panel-section-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sc-text-secondary);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 4px 0 6px;
+}
+
+/* Property card (wraps each editable field group) */
+.property-card {
+  background: #ffffff;
+  border: 1px solid var(--sc-border-light);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+/* Editable label input */
+.property-input {
+  font-size: 13px;
+  color: var(--sc-text-primary);
+  background: var(--sc-surface);
+  border: 1px solid var(--sc-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  width: 100%;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.property-input:focus {
+  border-color: var(--sc-purple);
+}
+
+/* Flashcard block */
+.flashcard {
+  background: var(--sc-surface-panel);
+  border-left: 3px solid var(--sc-purple);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+  color: var(--sc-text-primary);
+  line-height: 1.6;
+}
+
+/* Regenerate / action button */
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sc-purple);
+  background: transparent;
+  border: 1px solid var(--sc-purple);
+  border-radius: 100px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.btn-action:hover {
+  background: rgba(124, 100, 182, 0.08);
+}
+
+Canvas Panel — React Flow Nodes
+css/* React Flow wrapper override */
+.react-flow__renderer {
+  background: var(--sc-canvas-bg) !important;
+}
+
+/* Group node (cluster container) */
+.rf-group-node {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1.5px solid var(--sc-border);
+  border-radius: 16px;
+  padding: 14px;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 4px rgba(36, 51, 81, 0.08);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.rf-group-node:hover,
+.rf-group-node.selected {
+  border-color: var(--sc-purple);
+  box-shadow: 0 0 0 3px rgba(124, 100, 182, 0.15);
+}
+
+/* Group label */
+.rf-group-label {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--sc-purple);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+/* Child (chunk) node */
+.rf-chunk-node {
+  background: #ffffff;
+  border: 1px solid var(--sc-border-light);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--sc-text-primary);
+  line-height: 1.5;
+  max-width: 200px;
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s;
+}
+.rf-chunk-node:hover {
+  border-color: var(--sc-purple);
+}
+.rf-chunk-node.active {
+  border-color: var(--sc-purple);
+  box-shadow: 0 0 0 2px rgba(124, 100, 182, 0.2);
+}
+
+/* React Flow edge */
+.react-flow__edge-path {
+  stroke: var(--sc-border);
+  stroke-width: 1.5;
+}
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--sc-purple);
+}
+
+/* Toolbar (zoom controls bottom-left) */
+.rf-controls {
+  background: var(--sc-surface-panel);
+  border: 1px solid var(--sc-border-light);
+  border-radius: 12px;
+  padding: 4px;
+  box-shadow: none;
+}
+
+Right Panel — Chat / LLM Prompt
+css/* Chat container */
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Message history scroll area */
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* User bubble */
+.chat-bubble-user {
+  align-self: flex-end;
+  background: var(--sc-purple);
+  color: #ffffff;
+  border-radius: 16px 16px 4px 16px;
+  padding: 8px 12px;
+  font-size: 13px;
+  max-width: 85%;
+  line-height: 1.5;
+}
+
+/* AI bubble */
+.chat-bubble-ai {
+  align-self: flex-start;
+  background: #ffffff;
+  border: 1px solid var(--sc-border-light);
+  color: var(--sc-text-primary);
+  border-radius: 4px 16px 16px 16px;
+  padding: 8px 12px;
+  font-size: 13px;
+  max-width: 90%;
+  line-height: 1.6;
+}
+
+/* Typing indicator (dot animation — extracted from Mixboard) */
+.dot-animation {
+  background-color: var(--sc-purple);
+  border-radius: 5px;
+  height: 8px; width: 8px;
+  animation: dot-pulse 1s infinite alternate;
+}
+@keyframes dot-pulse {
+  0%   { background-color: var(--sc-purple); }
+  100% { background-color: rgba(124,100,182,0.3); }
+}
+
+/* Input area */
+.chat-input-area {
+  border-top: 1px solid var(--sc-border-light);
+  padding: 12px;
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  background: var(--sc-surface-panel);
+}
+
+.chat-input {
+  flex: 1;
+  resize: none;
+  border: 1px solid var(--sc-border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--sc-text-primary);
+  background: #ffffff;
+  outline: none;
+  line-height: 1.5;
+  max-height: 120px;
+  transition: border-color 0.15s;
+}
+.chat-input:focus {
+  border-color: var(--sc-purple);
+}
+
+/* Send button */
+.btn-send {
+  background: var(--sc-purple);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  width: 36px; height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.btn-send:hover { background: var(--sc-purple-hover); }
+.btn-send:disabled { opacity: 0.4; cursor: default; }
+
+Scrollbar (from Mixboard source)
+css::-webkit-scrollbar { width: 10px; background: transparent; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: rgba(124, 100, 182, 0.25);
+  border-radius: 16px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(124, 100, 182, 0.45);
+}
+
+Tailwind Config Extension (if using Tailwind)
+js// tailwind.config.js
+extend: {
+  colors: {
+    'sc-purple':    '#7c64b6',
+    'sc-blue-text': '#243351',
+    'sc-surface':   '#f3f7fc',
+    'sc-panel':     '#eff4fb',
+    'sc-border':    '#c4d4ec',
+    'sc-canvas':    '#e3e3e3',
+  },
+  borderRadius: {
+    'node': '10px',
+    'group': '16px',
+    'pill': '100px',
+  }
+}
+
