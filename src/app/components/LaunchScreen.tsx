@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, ArrowRight, BookOpen, Brain, Zap } from 'lucide-react';
+import { Sparkles, ArrowRight, BookOpen, Brain, Zap, Sun, Moon } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { PDFUploader } from './PDFUploader';
 import { generateConceptsFromTopic } from '../utils/geminiApi';
@@ -7,7 +7,8 @@ import { toast } from 'sonner';
 
 export function LaunchScreen() {
   const [prompt, setPrompt] = React.useState('');
-  const { setIsWorkspaceActive, isProcessing, setIsProcessing, setNodes, setEdges, setInitialPrompt, addChatMessage } = useStore();
+  const { setIsWorkspaceActive, isProcessing, setIsProcessing, setNodes, setEdges, setInitialPrompt, addChatMessage, theme, toggleTheme } = useStore();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,6 +52,23 @@ export function LaunchScreen() {
 
   return (
     <div className="launch-screen">
+      {/* Theme toggle — top right */}
+      <button
+        className="theme-toggle launch-theme-toggle"
+        onClick={toggleTheme}
+        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+      >
+        <span className="theme-toggle-track">
+          <span className="theme-toggle-thumb">
+            {theme === 'dark'
+              ? <Moon className="w-3 h-3" />
+              : <Sun className="w-3 h-3" />
+            }
+          </span>
+        </span>
+      </button>
+
       <div className="launch-background">
         {/* Consistent Dot Grid */}
         <div className="canvas-welcome-dots" style={{ opacity: 0.6 }} />

@@ -5,13 +5,18 @@ import { RightPanel } from './components/RightPanel';
 import { PDFUploader } from './components/PDFUploader';
 import { ExportButtons } from './components/ExportButtons';
 import { LoadingOverlay } from './components/LoadingOverlay';
-import { Sparkles, Layers } from 'lucide-react';
+import { Sparkles, Layers, Sun, Moon } from 'lucide-react';
 import { Toaster } from './components/ui/sonner';
 import { useStore } from './store/useStore';
 import { LaunchScreen } from './components/LaunchScreen';
 
 export default function App() {
-  const { isProcessing, nodes, isWorkspaceActive } = useStore();
+  const { isProcessing, nodes, isWorkspaceActive, theme, toggleTheme } = useStore();
+
+  // Apply dark class on initial mount (default = dark)
+  React.useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+  }, []);
 
   if (!isWorkspaceActive) {
     return (
@@ -57,6 +62,23 @@ export default function App() {
           <PDFUploader />
           <div style={{ width: 1, height: 20, background: 'var(--sc-border-light)', flexShrink: 0 }} />
           <ExportButtons />
+          <div style={{ width: 1, height: 20, background: 'var(--sc-border-light)', flexShrink: 0 }} />
+          {/* Theme toggle */}
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+          >
+            <span className="theme-toggle-track">
+              <span className="theme-toggle-thumb">
+                {theme === 'dark'
+                  ? <Moon className="w-3 h-3" />
+                  : <Sun className="w-3 h-3" />
+                }
+              </span>
+            </span>
+          </button>
         </div>
       </header>
 

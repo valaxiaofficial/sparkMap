@@ -81,7 +81,7 @@ export function RightPanel() {
   
   return (
     <div className="chat-container">
-      <div className="p-3 border-b border-[var(--sc-border-light)] bg-white flex items-center gap-2">
+      <div className="chat-panel-header">
         <Bot className="w-5 h-5 text-[var(--sc-purple)]" />
         <h2 className="text-[14px] font-medium text-[var(--sc-blue-text)] m-0">AI Study Assistant</h2>
       </div>

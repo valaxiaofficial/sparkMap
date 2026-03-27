@@ -10,7 +10,7 @@ export function LoadingOverlay({ isVisible, message = 'Processing...' }: Loading
   
   return (
     <div className="fixed inset-0 bg-[rgba(36,51,81,0.4)] backdrop-blur-[2px] flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-8 shadow-lg flex flex-col items-center gap-4 max-w-sm border border-[var(--sc-border-light)]">
+      <div className="loading-card">
         <div className="dot-animation !w-3 !h-3" style={{ animationDuration: '0.8s' }} />
         <div className="text-center">
           <p className="font-medium text-[14px] text-[var(--sc-text-primary)] mb-1">{message}</p>

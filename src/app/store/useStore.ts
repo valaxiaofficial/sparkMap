@@ -67,9 +67,13 @@ interface StoreState {
   
   // Update node
   updateNode: (nodeId: string, updates: Partial<NodeData>) => void;
-  
+
   // Delete node
   deleteNode: (nodeId: string) => void;
+
+  // Theme
+  theme: 'dark' | 'light';
+  toggleTheme: () => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -102,6 +106,13 @@ export const useStore = create<StoreState>((set) => ({
   setIsWorkspaceActive: (isActive) => set({ isWorkspaceActive: isActive }),
   initialPrompt: '',
   setInitialPrompt: (prompt) => set({ initialPrompt: prompt }),
+
+  theme: 'dark',
+  toggleTheme: () => set((state) => {
+    const next = state.theme === 'dark' ? 'light' : 'dark';
+    document.documentElement.classList.toggle('dark', next === 'dark');
+    return { theme: next };
+  }),
   
   updateNode: (nodeId, updates) => set((state) => ({
     nodes: state.nodes.map((node) =>

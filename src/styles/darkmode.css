@@ -1,0 +1,476 @@
+/* ============================================================
+   SparkMap AI — Dark Mode Design System
+   ============================================================ */
+
+/* ── Chat Panel Header (light + dark aware) ── */
+.chat-panel-header {
+  padding: 12px;
+  border-bottom: 1px solid var(--sc-border-light);
+  background: var(--sc-surface-card);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* ── Dark Mode CSS Variables ── */
+.dark {
+  /* Nature Palette — muted for dark */
+  --sc-sage: #7ecec4;
+  --sc-green-deep: #5a9e8f;
+  --sc-earth: #8c8c7a;
+  --sc-sand: #2a2d35;
+  --sc-water: #5bbec4;
+  --sc-purple: #a78bfa;
+  --sc-blue: #60a5fa;
+
+  /* Primary surface */
+  --sc-surface: #1a1d27;
+  --sc-surface-panel: rgba(22, 25, 37, 0.92);
+  --sc-surface-card: #1e2130;
+  --sc-surface-hover: #252839;
+
+  /* Text */
+  --sc-text-primary: #e2e8f0;
+  --sc-text-secondary: #94a3b8;
+  --sc-text-muted: #475569;
+  --sc-blue-text: #cbd5e1;
+
+  /* Accent Branding */
+  --sc-primary: #7ecec4;
+  --sc-primary-hover: #5ab8ae;
+  --sc-primary-light: rgba(126, 206, 196, 0.1);
+  --sc-primary-glow: rgba(126, 206, 196, 0.18);
+
+  /* Borders & Radius */
+  --sc-border: #2d3347;
+  --sc-border-light: #242838;
+
+  /* Canvas background */
+  --sc-canvas-bg: #13161f;
+
+  /* Soft Elevation */
+  --sc-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.3);
+  --sc-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.4);
+  --sc-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.5);
+  --sc-shadow-sage: 0 0 0 4px rgba(126, 206, 196, 0.15);
+  --sc-shadow-purple: 0 0 0 2px rgba(167, 139, 250, 0.2);
+
+  /* Purple palette */
+  --sc-purple-light: rgba(167, 139, 250, 0.12);
+}
+
+/* ── Dark: Global body & html ── */
+.dark body {
+  background: var(--sc-canvas-bg);
+  color: var(--sc-text-primary);
+}
+
+/* ── Dark: App Shell ── */
+.dark .app-shell {
+  background: var(--sc-canvas-bg);
+}
+
+/* ── Dark: Header ── */
+.dark .header {
+  background: rgba(18, 21, 32, 0.88);
+  border-bottom-color: var(--sc-border-light);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.dark .header-title {
+  color: var(--sc-blue-text);
+}
+
+.dark .header-subtitle {
+  color: var(--sc-text-secondary);
+}
+
+.dark .header-tag {
+  background: var(--sc-primary-light);
+  color: var(--sc-primary);
+  border-color: rgba(126, 206, 196, 0.18);
+}
+
+/* ── Dark: Panels ── */
+.dark .panel-left,
+.dark .panel-right {
+  background: var(--sc-surface-panel);
+  border-color: var(--sc-border-light);
+  box-shadow: none;
+}
+
+.dark .panel-canvas {
+  background: var(--sc-canvas-bg);
+}
+
+/* ── Dark: Property Cards ── */
+.dark .property-card {
+  background: var(--sc-surface-card);
+  border-color: var(--sc-border);
+  box-shadow: var(--sc-shadow-sm);
+}
+
+.dark .property-card:hover {
+  box-shadow: var(--sc-shadow-md);
+}
+
+/* ── Dark: Inputs ── */
+.dark .property-input {
+  background: var(--sc-surface);
+  border-color: var(--sc-border);
+  color: var(--sc-text-primary);
+}
+
+.dark .property-input:focus {
+  border-color: var(--sc-purple);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.14);
+}
+
+.dark .property-input::placeholder {
+  color: var(--sc-text-muted);
+}
+
+/* ── Dark: Flashcard ── */
+.dark .flashcard {
+  background: var(--sc-surface);
+  color: var(--sc-text-primary);
+  border-left-color: var(--sc-sage);
+}
+
+.dark .flashcard:hover {
+  background: var(--sc-surface-hover);
+}
+
+/* ── Dark: Panel empty state ── */
+.dark .panel-empty-icon {
+  background: var(--sc-surface-hover);
+  border-color: var(--sc-border);
+  color: var(--sc-purple);
+}
+
+.dark .panel-section-label {
+  color: var(--sc-text-secondary);
+}
+
+/* ── Dark: Buttons ── */
+.dark .btn-action {
+  background: var(--sc-surface-card);
+  color: var(--sc-sage);
+  border-color: var(--sc-border);
+}
+
+.dark .btn-action:hover:not(:disabled) {
+  background: var(--sc-primary-light);
+  border-color: var(--sc-sage);
+  box-shadow: var(--sc-shadow-sage);
+}
+
+.dark .btn-danger {
+  color: #f87171;
+  border-color: rgba(248, 113, 113, 0.25);
+}
+
+.dark .btn-danger:hover:not(:disabled) {
+  background: rgba(248, 113, 113, 0.08);
+}
+
+/* ── Dark: Canvas Nodes ── */
+.dark .rf-chunk-node {
+  background: var(--sc-surface-card);
+  border-color: var(--sc-border);
+  color: var(--sc-text-primary);
+  box-shadow: var(--sc-shadow-sm);
+}
+
+.dark .rf-chunk-node:hover {
+  border-color: transparent;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.dark .rf-chunk-node.active,
+.dark .rf-chunk-node.selected {
+  border-color: var(--sc-purple);
+  box-shadow: var(--sc-shadow-purple), var(--sc-shadow-sm);
+}
+
+.dark .rf-group-node {
+  background: rgba(30, 33, 48, 0.6);
+  border-color: rgba(126, 206, 196, 0.15);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
+}
+
+.dark .rf-group-node:hover,
+.dark .rf-group-node.selected {
+  background: rgba(37, 40, 57, 0.75);
+  border-color: var(--sc-sage);
+  box-shadow: 0 12px 48px rgba(126, 206, 196, 0.08);
+}
+
+.dark .rf-group-label {
+  color: var(--sc-purple);
+}
+
+.dark .rf-flashcard-badge {
+  color: var(--sc-purple);
+  background: var(--sc-purple-light);
+}
+
+/* ── Dark: React Flow ── */
+.dark .react-flow__renderer {
+  background: var(--sc-canvas-bg) !important;
+}
+
+.dark .react-flow__edge-path {
+  stroke: var(--sc-border);
+}
+
+.dark .react-flow__edge:hover .react-flow__edge-path,
+.dark .react-flow__edge.selected .react-flow__edge-path {
+  stroke: var(--sc-sage);
+}
+
+.dark .rf-controls {
+  background: var(--sc-surface-card) !important;
+  border-color: var(--sc-border) !important;
+}
+
+.dark .rf-controls button {
+  color: var(--sc-text-secondary) !important;
+}
+
+.dark .rf-controls button:hover {
+  background: var(--sc-surface-hover) !important;
+  color: var(--sc-text-primary) !important;
+}
+
+.dark .react-flow__minimap {
+  border-color: var(--sc-border) !important;
+}
+
+/* ── Dark: Chat Panel ── */
+.dark .chat-container {
+  background: var(--sc-surface-panel);
+}
+
+.dark .chat-bubble-ai {
+  background: var(--sc-surface-card);
+  border-color: var(--sc-border);
+  color: var(--sc-text-primary);
+}
+
+.dark .chat-input {
+  background: var(--sc-surface);
+  border-color: var(--sc-border);
+  color: var(--sc-text-primary);
+}
+
+.dark .chat-input:focus {
+  border-color: var(--sc-purple);
+  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.14);
+  background: var(--sc-surface-card);
+}
+
+.dark .chat-input::placeholder {
+  color: var(--sc-text-muted);
+}
+
+.dark .p-3.border-b {
+  background: var(--sc-surface-card);
+  border-color: var(--sc-border-light);
+}
+
+/* ── Dark: Chat input area border ── */
+.dark .chat-input-area {
+  border-top-color: var(--sc-border-light) !important;
+  background: var(--sc-surface-card);
+}
+
+/* ── Dark: Loading overlay ── */
+.dark .loading-card {
+  background: var(--sc-surface-card);
+  border-color: var(--sc-border);
+}
+
+/* ── Dark: Canvas dot pattern ── */
+.dark .canvas-welcome-dots {
+  background-image: radial-gradient(rgba(126, 206, 196, 0.25) 1px, transparent 0);
+}
+
+.dark .canvas-scale-indicator {
+  background: rgba(22, 25, 37, 0.8);
+  border-color: var(--sc-border);
+  color: var(--sc-text-secondary);
+}
+
+/* ── Dark: Launch Screen ── */
+.dark .launch-screen {
+  background-color: #0e1018;
+}
+
+.dark .launch-hero-title {
+  color: #e2e8f0;
+}
+
+.dark .launch-hero-sub {
+  color: var(--sc-text-secondary);
+}
+
+.dark .launch-input-wrapper {
+  background: var(--sc-surface-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3), 0 0 0 1px var(--sc-border);
+}
+
+.dark .launch-input-wrapper:focus-within {
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4), 0 0 0 2px var(--sc-sage);
+}
+
+.dark .launch-input {
+  color: var(--sc-text-primary);
+}
+
+.dark .launch-input::placeholder {
+  color: var(--sc-text-muted);
+}
+
+.dark .feature-card {
+  background: rgba(30, 33, 48, 0.6);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.dark .feature-text strong {
+  color: var(--sc-text-primary);
+}
+
+.dark .feature-text span {
+  color: var(--sc-text-secondary);
+}
+
+.dark .launch-divider::before,
+.dark .launch-divider::after {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dark .launch-brand {
+  color: var(--sc-sage);
+}
+
+.dark .blob {
+  opacity: 0.12;
+}
+
+/* ── Dark: Scrollbars ── */
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(167, 139, 250, 0.18);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(167, 139, 250, 0.35);
+}
+
+/* ============================================================
+   Theme Toggle Button
+   ============================================================ */
+.theme-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  border-radius: 100px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.theme-toggle:hover .theme-toggle-track {
+  box-shadow: 0 0 0 3px rgba(126, 206, 196, 0.2);
+}
+
+.theme-toggle-track {
+  width: 48px;
+  height: 26px;
+  border-radius: 100px;
+  background: linear-gradient(135deg, #7ecec4, #5a9e8f);
+  display: flex;
+  align-items: center;
+  padding: 3px;
+  position: relative;
+  transition: background 0.3s ease, box-shadow 0.2s ease;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Light mode track */
+:root:not(.dark) .theme-toggle-track {
+  background: linear-gradient(135deg, #f59e0b, #fbbf24);
+}
+
+.theme-toggle-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: #5a9e8f;
+  flex-shrink: 0;
+  margin-left: auto; /* push to right in dark mode */
+}
+
+/* Light mode: thumb on the left */
+:root:not(.dark) .theme-toggle-thumb {
+  margin-left: 0;
+  margin-right: auto;
+  color: #f59e0b;
+}
+
+/* Launch screen toggle positioning */
+.launch-theme-toggle {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 10;
+}
+
+/* ============================================================
+   Light Mode Polish — improved whites, better contrast
+   ============================================================ */
+:root:not(.dark) {
+  --sc-purple: #7c64b6;
+  --sc-purple-light: rgba(124, 100, 182, 0.1);
+  --sc-shadow-purple: 0 0 0 2px rgba(124, 100, 182, 0.15);
+  --sc-blue-text: #2c3e50;
+}
+
+:root:not(.dark) .property-card {
+  background: #ffffff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04), 0 0 0 1px rgba(0, 0, 0, 0.03);
+  border-color: #f0f0f0;
+}
+
+:root:not(.dark) .btn-action {
+  background: #ffffff;
+}
+
+:root:not(.dark) .launch-screen {
+  background-color: #f8faf9;
+}
+
+:root:not(.dark) .chat-bubble-ai {
+  background: #ffffff;
+}
+
+/* ── Chat input area ── */
+.chat-input-area {
+  padding: 12px;
+  border-top: 1px solid var(--sc-border-light);
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  background: var(--sc-surface-card);
+  flex-shrink: 0;
+}
