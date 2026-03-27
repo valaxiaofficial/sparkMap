@@ -1,55 +1,88 @@
 import { useEffect, useRef } from 'react';
 import { useStore } from '../store/useStore';
+import { useReactFlow } from '@xyflow/react';
 
 export function usePhysicsSimulation() {
-  const isSimulating = useStore(state => state.isSimulating);
   const nodes = useStore(state => state.nodes);
-  const animationRef = useRef<number>();
+  const animationRef = useRef<number>(0);
+  const { fitView } = useReactFlow();
   
-  // Physics parameters from user's snippet
-  const REP = 7500;
-  const SPRING = 0.016;
-  const SLEN = 155;
-  const DAMP = 0.87;
-  const CENTER = 0.002;
+  // D3-style Alpha cooling
+  const alphaRef = useRef(1.0);
+  const lastNodeCount = useRef(0);
+  const hasSettledRef = useRef(false);
 
-  // We maintain velocities in a ref to avoid polluting store state
+  // Redesigned constants for tight, beautiful organic clustering
+  const OPTIMAL_DIST = 120; // ideal spring length
+  const REPULSION_STR = 6000; // base repulsion strength
+  const SPRING_STR = 0.05; // spring tension
+  const DAMP = 0.6; // high friction stops wobbling
+  const CENTER_STR = 0.005; // gentle gravity
+
   const velocities = useRef<Record<string, { vx: number; vy: number }>>({});
 
   useEffect(() => {
-    if (!isSimulating || nodes.length === 0) {
-      if (animationRef.current) cancelAnimationFrame(animationRef.current);
-      return;
+    if (nodes.length !== lastNodeCount.current) {
+      alphaRef.current = 1.0;
+      lastNodeCount.current = nodes.length;
+      hasSettledRef.current = false;
+    }
+  }, [nodes.length]);
+
+  useEffect(() => {
+    if (nodes.length > 0) {
+      alphaRef.current = 1.0;
+      hasSettledRef.current = false;
     }
 
-    // Initialize velocities for new nodes
-    nodes.forEach(n => {
-      if (!velocities.current[n.id]) velocities.current[n.id] = { vx: 0, vy: 0 };
-    });
-
     const loop = () => {
-      // We read the latest nodes from store.
-      // Zustand allows us to useStore.getState() so we can run loop natively
       const currentNodes = useStore.getState().nodes;
       const currentEdges = useStore.getState().edges;
+
+      // Stop loop when cooled completely and perfectly frame to 52% exactly as requested
+      if (currentNodes.length === 0 || alphaRef.current < 0.005) {
+        if (!hasSettledRef.current && currentNodes.length > 0) {
+          hasSettledRef.current = true;
+          fitView({ padding: 0.1, duration: 1000, maxZoom: 0.52, minZoom: 0.52 });
+        }
+        animationRef.current = requestAnimationFrame(loop);
+        return;
+      }
+
+      alphaRef.current *= 0.95; // fast cooling factor
       
       let moved = false;
       const nextNodes = currentNodes.map(node => {
         let fx = 0;
         let fy = 0;
 
-        // 1. Repulsion between all nodes
+        // 1. Repulsive Force (inverse square, very weak far away)
         for (let j = 0; j < currentNodes.length; j++) {
           if (node.id === currentNodes[j].id) continue;
+          
           const other = currentNodes[j];
-          const dx = node.position.x - other.position.x;
-          const dy = node.position.y - other.position.y;
-          const d2 = dx * dx + dy * dy + 1;
-          fx += (REP / d2) * dx;
-          fy += (REP / d2) * dy;
+          let dx = node.position.x - other.position.x;
+          let dy = node.position.y - other.position.y;
+          let d2 = dx * dx + dy * dy;
+
+          if (d2 === 0) {
+            dx = (Math.random() - 0.5) * 10;
+            dy = (Math.random() - 0.5) * 10;
+            d2 = dx * dx + dy * dy;
+          }
+
+          let d = Math.sqrt(d2);
+          
+          // Only repel if they are decently close to prevent giant expansive circles
+          if (d < OPTIMAL_DIST * 3) {
+            const force = (REPULSION_STR / d2) * alphaRef.current;
+            fx += force * dx;
+            fy += force * dy;
+          }
         }
 
-        // 2. Spring attraction along edges
+        // 2. Attractive Force (spring)
+        let connectedEdgesCount = 0;
         for (let k = 0; k < currentEdges.length; k++) {
           const edge = currentEdges[k];
           let otherId: string | null = null;
@@ -58,35 +91,49 @@ export function usePhysicsSimulation() {
           if (edge.target === node.id) otherId = edge.source;
           
           if (!otherId) continue;
+          connectedEdgesCount++;
           
           const otherNode = currentNodes.find(n => n.id === otherId);
           if (!otherNode) continue;
 
-          const dx = otherNode.position.x - node.position.x;
-          const dy = otherNode.position.y - node.position.y;
-          const d = Math.sqrt(dx * dx + dy * dy) + 0.01;
-          const f = SPRING * (d - SLEN);
+          let dx = otherNode.position.x - node.position.x;
+          let dy = otherNode.position.y - node.position.y;
+          let d = Math.sqrt(dx * dx + dy * dy);
+          if (d === 0) { d = 0.01; dx = 0.01; }
           
-          fx += (f * dx) / d;
-          fy += (f * dy) / d;
+          // Hooks law
+          const force = SPRING_STR * (d - OPTIMAL_DIST) * alphaRef.current;
+          fx += force * (dx / d);
+          fy += force * (dy / d);
         }
 
-        // 3. Center gravity (pulling back to origin 0,0)
-        fx -= CENTER * node.position.x;
-        fy -= CENTER * node.position.y;
+        // 3. Gravity pulling orphans closer to center than big clusters
+        const mass = Math.max(1, connectedEdgesCount);
+        const gravity = CENTER_STR / mass;
+        fx -= gravity * node.position.x * alphaRef.current;
+        fy -= gravity * node.position.y * alphaRef.current;
 
-        // Node velocities
+        // 4. Strict bounding box to ensure everything fits inside 52% viewport zoom
+        const BOUND_X = 900;
+        const BOUND_Y = 500;
+        if (node.position.x > BOUND_X) fx -= (node.position.x - BOUND_X) * alphaRef.current * 0.8;
+        if (node.position.x < -BOUND_X) fx += (-BOUND_X - node.position.x) * alphaRef.current * 0.8;
+        if (node.position.y > BOUND_Y) fy -= (node.position.y - BOUND_Y) * alphaRef.current * 0.8;
+        if (node.position.y < -BOUND_Y) fy += (-BOUND_Y - node.position.y) * alphaRef.current * 0.8;
+
+        // Update velocity
         const vel = velocities.current[node.id] || { vx: 0, vy: 0 };
         vel.vx = (vel.vx + fx) * DAMP;
         vel.vy = (vel.vy + fy) * DAMP;
+        velocities.current[node.id] = vel;
         
-        // Root node is often heavy/static, we could lock it but for now let it drift slightly
+        // Root node anchoring
         if (node.data.isRoot) {
-           vel.vx *= 0.1;
-           vel.vy *= 0.1;
+           vel.vx = 0;
+           vel.vy = 0;
         }
 
-        if (Math.abs(vel.vx) > 0.1 || Math.abs(vel.vy) > 0.1) moved = true;
+        if (Math.abs(vel.vx) > 0.05 || Math.abs(vel.vy) > 0.05) moved = true;
 
         return {
           ...node,
@@ -97,7 +144,7 @@ export function usePhysicsSimulation() {
         };
       });
 
-      if (moved) {
+      if (moved && alphaRef.current >= 0.005) {
         useStore.getState().setNodes(nextNodes);
       }
       
@@ -109,6 +156,5 @@ export function usePhysicsSimulation() {
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [isSimulating]); // only re-bind when simulation toggles, loop reads from getState()
-  
+  }, [fitView]); 
 }

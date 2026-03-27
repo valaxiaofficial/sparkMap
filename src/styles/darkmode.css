@@ -60,6 +60,52 @@
   --sc-purple-light: rgba(167, 139, 250, 0.12);
 }
 
+.dark .app-shell, .dark.app-shell {
+  /* Sublime Monokai Palette — Adapted for UI */
+  --sc-sage: #7ecec4; /* Restored Teal */
+  --sc-green-deep: #75715E; /* Monokai Comment Grey/Brown */
+  --sc-earth: #75715E;
+  --sc-sand: #3E3D32; /* Selection / panel color */
+  --sc-water: #66D9EF; /* Monokai Blue/Cyan */
+  --sc-purple: #AE81FF; /* Monokai Purple */
+  --sc-blue: #66D9EF;
+
+  /* Primary surface */
+  --sc-surface: #272822; /* Primary Editor BG */
+  --sc-surface-panel: rgba(30, 31, 28, 0.95); /* Slightly darker for panels */
+  --sc-surface-card: #272822; 
+  --sc-surface-hover: #3E3D32; /* Monokai Line highlight */
+
+  /* Text */
+  --sc-text-primary: #F8F8F2; /* Main text */
+  --sc-text-secondary: #C8C8C5; /* Sub muted text */
+  --sc-text-muted: #75715E; /* Comments */
+  --sc-blue-text: #66D9EF;
+
+  /* Accent Branding */
+  --sc-primary: #7ecec4; /* Restored Teal */
+  --sc-primary-hover: #5ab8ae; /* Restored Teal Hover */
+  --sc-primary-light: rgba(126, 206, 196, 0.15);
+  --sc-primary-glow: rgba(126, 206, 196, 0.25);
+
+  /* Borders & Radius */
+  --sc-border: #49483E; /* Monokai Border/Line Guide */
+  --sc-border-light: #3E3D32;
+
+  /* Canvas background */
+  --sc-canvas-bg: #1A1A17; /* Extra dark base for contrast */
+
+  /* Soft Elevation */
+  --sc-shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --sc-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --sc-shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.8);
+  --sc-shadow-sage: 0 0 0 4px rgba(126, 206, 196, 0.15);
+  --sc-shadow-purple: 0 0 0 2px rgba(174, 129, 255, 0.2);
+
+  /* Purple palette */
+  --sc-purple-light: rgba(174, 129, 255, 0.15);
+}
+
 /* ── Dark: Global body & html ── */
 .dark body {
   background: var(--sc-canvas-bg);

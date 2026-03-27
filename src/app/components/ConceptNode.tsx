@@ -15,9 +15,19 @@ export function ConceptNode({ data, selected }: NodeProps) {
   // Determine if we should show the "Detailed" view (either high zoom or hover)
   const showFull = isHovered || zoom > 1.2;
 
-  // Base classes for Pixel OS aesthetic
+  let themeClass = '';
+  if (nodeData.isRoot) {
+    themeClass = 'theme-root'; // Level 0
+  } else if (nodeData.isHub) {
+    themeClass = 'theme-hub-1'; // Level 1 (All Hubs use Color 1: Teal)
+  } else {
+    themeClass = 'theme-leaf-2'; // Level 2 (All Leaves use Color 2: Purple)
+  }
+
+  // Base classes for Pixel OS aesthetic + dynamic theme
   const nodeClass = [
     'rf-pixel-node',
+    themeClass,
     isDot ? 'node-dot' : '',
     isBox ? 'node-box' : '',
     selected ? 'selected' : '',
@@ -34,9 +44,13 @@ export function ConceptNode({ data, selected }: NodeProps) {
       <Handle
         type="target"
         position={Position.Top}
-        className="rf-handle-port"
+        className="rf-handle-port rf-handle-target"
       />
-
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="rf-handle-port rf-handle-source"
+      />
       <div className="node-content-wrapper">
         {/* State 1: Dot (Minimal topology) */}
         {isDot && (
@@ -89,11 +103,7 @@ export function ConceptNode({ data, selected }: NodeProps) {
         )}
       </div>
 
-      <Handle
-        type="source"
-        position={Position.Bottom}
-        className="rf-handle-port"
-      />
+
     </div>
   );
 }

@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { 
   Sparkles, ArrowRight, BookOpen, Brain, Zap, Sun, Moon, History, 
   Plus, Search, Settings, PanelLeftClose, PanelLeftOpen,
-  LayoutGrid, FileText, Code2, User, Pin, PinOff
+  LayoutGrid, FileText, Code2, User, Pin, PinOff,
+  Share2, Download, Bot, Users, Layers, Workflow
 } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { DocUploader } from './DocUploader';
@@ -324,6 +325,9 @@ export function LaunchScreen() {
           <div className="blob blob-2"></div>
         </div>
 
+        <div className="launch-hero-section">
+
+
         <div className="launch-content animate-fade-in">
           <div className="launch-header">
             <div className="launch-logo">
@@ -391,6 +395,125 @@ export function LaunchScreen() {
             </div>
           </div>
         </div>
+        </div>
+
+        {/* --- ABOUT SECTION --- */}
+        <section className="launch-info-section text-center border-t border-[var(--sc-border-light)] bg-[#fafbfb] dark:bg-[var(--sc-surface-alt)]">
+          <div className="info-container">
+            <h2 className="info-section-title">What is <span>SparkMap AI?</span></h2>
+            <p className="text-[16px] text-[var(--sc-text-secondary)] max-w-2xl mx-auto leading-relaxed mt-4">
+              SparkMap AI is a next-generation study workspace that seamlessly fuses the free-form creativity of mind mapping with the rigid structure of relational databases. By converting plain text and uploads into Neo4j-backed knowledge graphs, SparkMap automatically structures your thoughts into interactive topological networks, giving you unparalleled semantic overview over complex topics.
+            </p>
+          </div>
+        </section>
+
+        {/* --- FEATURES SECTION --- */}
+        <section className="launch-info-section">
+          <div className="info-container">
+            <h2 className="info-section-title">Powerful features for <span>deep work</span></h2>
+            
+            <div className="info-grid">
+              <div className="info-card">
+                <div className="info-card-image">
+                  <img src="/features/ai.png" alt="AI mapping" />
+                </div>
+                <div className="info-card-content">
+                  <div className="info-card-icon blue"><Bot size={24} /></div>
+                  <h3>AI-Powered Mapping</h3>
+                  <p>Generate expansive, hierarchically structured mind maps from simple keyword prompts in seconds. Let the AI handle the heavy lifting while you connect the concepts.</p>
+                </div>
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-image">
+                  <img src="/features/document.png" alt="Document Parsing" />
+                </div>
+                <div className="info-card-content">
+                  <div className="info-card-icon purple"><FileText size={24} /></div>
+                  <h3>Intelligent Document Parsing</h3>
+                  <p>Upload PDFs and let our parsing engine break down dense materials into visual, digestible nodes seamlessly linked by conceptual relevance.</p>
+                </div>
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-image">
+                  <img src="/features/physics.png" alt="Physics Layout" />
+                </div>
+                <div className="info-card-content">
+                  <div className="info-card-icon orange"><Workflow size={24} /></div>
+                  <h3>Force-directed Physics</h3>
+                  <p>Enjoy a responsive canvas equipped with automatic layout algorithms and force-directed physics that naturally organize and detangle your nodes dynamically.</p>
+                </div>
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-content">
+                  <div className="info-card-icon"><Brain size={24} /></div>
+                  <h3>Smart Flashcards</h3>
+                  <p>Every node becomes a learning opportunity. Instantly generate context-aware Q&A flashcards directly from any node in your graph for active recall.</p>
+                </div>
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-content">
+                  <div className="info-card-icon blue"><Layers size={24} /></div>
+                  <h3>Persistent Workspaces</h3>
+                  <p>Backed securely by Neo4j graph databases and local storage fallbacks, ensuring your intricate knowledge webs are never lost and load instantly.</p>
+                </div>
+              </div>
+
+              <div className="info-card">
+                <div className="info-card-content">
+                  <div className="info-card-icon purple"><Download size={24} /></div>
+                  <h3>Export & Share</h3>
+                  <p>Download your canvas fully rendered as high-fidelity PNG images natively right from the workspace to share with peers or include in reports.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* --- COMING SOON SECTION --- */}
+        <section className="launch-info-section border-t border-[var(--sc-border-light)] bg-gradient-to-b from-[#fafbfb] to-[#f4f7f6] dark:from-[var(--sc-surface-alt)] dark:to-[var(--sc-canvas-bg)]">
+          <div className="info-container">
+            <h2 className="info-section-title">What's <span>coming next?</span></h2>
+            <p className="text-[16px] text-[var(--sc-text-secondary)] text-center max-w-2xl mx-auto mb-12">
+              We're constantly expanding SparkMap's capabilities to make the ultimate knowledge tool. Check out what features are rolling out over the next few updates.
+            </p>
+
+            <div className="info-grid opacity-80 mt-0">
+              <div className="info-card relative overflow-hidden group hover:opacity-100 transition-opacity p-0">
+                <div className="absolute inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-[1px] z-10"></div>
+                <div className="info-card-content relative z-20">
+                  <div className="coming-soon-badge relative z-20">Coming Soon</div>
+                  <div className="info-card-icon purple relative z-20"><Users size={24} /></div>
+                  <h3 className="relative z-20">Real-time Collaboration</h3>
+                  <p className="relative z-20">Multiplayer workspace syncing. Collaborate live on identical graphs with your team using WebSockets.</p>
+                </div>
+              </div>
+
+              <div className="info-card relative overflow-hidden group hover:opacity-100 transition-opacity p-0">
+                <div className="absolute inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-[1px] z-10"></div>
+                <div className="info-card-content relative z-20">
+                  <div className="coming-soon-badge relative z-20">Coming Soon</div>
+                  <div className="info-card-icon orange relative z-20"><Share2 size={24} /></div>
+                  <h3 className="relative z-20">Public Link Sharing</h3>
+                  <p className="relative z-20">Generate read-only interactive canvas links so external viewers can pan, zoom, and explore your mind maps on the web.</p>
+                </div>
+              </div>
+
+              <div className="info-card relative overflow-hidden group hover:opacity-100 transition-opacity p-0">
+                <div className="absolute inset-0 bg-white/40 dark:bg-black/40 backdrop-blur-[1px] z-10"></div>
+                <div className="info-card-content relative z-20">
+                  <div className="coming-soon-badge relative z-20">Coming Soon</div>
+                  <div className="info-card-icon blue relative z-20"><Search size={24} /></div>
+                  <h3 className="relative z-20">Web Source Integration</h3>
+                  <p className="relative z-20">Directly embed and crawl live URLs. SparkMap will scrape websites and automatically convert them into visual nodes.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   );

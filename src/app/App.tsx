@@ -67,13 +67,6 @@ export default function App() {
             <p className="header-subtitle">AI-Powered Study Workspace</p>
           </div>
 
-          <div className="header-divider" />
-
-          {/* Status / info tag */}
-          <div className="header-tag">
-            <Layers className="w-3 h-3" />
-            <span>Workspace</span>
-          </div>
         </div>
 
         {/* Right actions */}

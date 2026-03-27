@@ -174,14 +174,14 @@ export function RightPanel() {
               onClick={() => setShowModelMenu(!showModelMenu)}
               className="flex items-center gap-1.5 px-2 py-1 rounded-[8px] bg-[var(--sc-surface-card)] shadow-sm border border-[var(--sc-border)] hover:border-[var(--sc-primary)] hover:text-[var(--sc-primary)] transition-all text-[11px] font-medium text-[var(--sc-text-muted)] group"
             >
-              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse group-hover:scale-110 transition-transform" />
+              <div className="w-1.5 h-1.5 rounded-full bg-[var(--sc-primary)] animate-pulse group-hover:scale-110 transition-transform" />
               <span>{SUPPORTED_MODELS.find(m => m.id === selectedModel)?.name || 'Select Model'}</span>
             </button>
 
             {showModelMenu && (
               <>
                 <div className="fixed inset-0 z-40" onClick={() => setShowModelMenu(false)} />
-                <div className="absolute bottom-full left-0 mb-2 w-48 glass-effect border border-[var(--sc-border-light)] rounded-[12px] shadow-xl p-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+                <div className="absolute bottom-full left-0 mb-2 w-48 bg-[var(--sc-surface-card)] border border-[var(--sc-border-light)] rounded-[12px] shadow-xl p-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
                   <div className="px-2 py-1.5 text-[9px] font-semibold text-[var(--sc-text-muted)] uppercase tracking-wider border-b border-[var(--sc-border-light)] mb-1">
                     Select AI Model
                   </div>

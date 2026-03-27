@@ -37,15 +37,6 @@ function ViewportTracker({ onRecenter }: { onRecenter: () => void }) {
       >
         <Sparkles className="w-3.5 h-3.5" />
       </button>
-      <button
-        className={`canvas-control-btn ${useStore(s => s.isSimulating) ? 'text-[var(--sc-primary)] bg-[var(--sc-primary-faint)]' : ''}`}
-        onClick={useStore(s => s.toggleSimulation)}
-        title={useStore(s => s.isSimulating) ? 'Pause Physics Simulation' : 'Resume Physics Simulation'}
-      >
-        <div className="text-[10px] font-bold uppercase tracking-wider px-1">
-          {useStore(s => s.isSimulating) ? 'Pause' : 'Play'}
-        </div>
-      </button>
       <div className="canvas-scale-indicator">
         {Math.round(zoom * 100)}%
       </div>
@@ -96,7 +87,7 @@ function CanvasInner() {
 
   // Recalibrate / Recenter
   const onRecenter = useCallback(() => {
-    fitView({ padding: 0.2, duration: 800 });
+    fitView({ padding: 0.1, duration: 800, maxZoom: 0.52 });
   }, [fitView]);
 
   // Dynamic Edge Styling: Dotted by default, Solid if connected to selected node
@@ -228,7 +219,7 @@ function CanvasInner() {
         onDoubleClick={onPaneDblClick}
         nodeTypes={nodeTypes}
         fitView
-        fitViewOptions={{ padding: 0.15 }}
+        fitViewOptions={{ padding: 0.1, maxZoom: 0.52, minZoom: 0.05 }}
         minZoom={0.05}
         maxZoom={4}
         panOnScroll={true}

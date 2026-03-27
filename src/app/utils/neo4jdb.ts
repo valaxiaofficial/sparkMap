@@ -78,7 +78,7 @@ export interface ChatMessage {
  * Saves a completely serialized mindmap layout to Neo4j.
  */
 export async function saveWorkspaceToNeo4j(topic: string, nodes: MinimalNode[], edges: MinimalEdge[]) {
-  return await withSession(async (session) => {
+  const isOk = await withSession(async (session) => {
     // 1. Delete prior associated nodes for this topic
     await session.run(`
       MATCH (m:Mindmap {topic: $topic})-[r:CONTAINS_NODE]->(n)
@@ -134,8 +134,15 @@ export async function saveWorkspaceToNeo4j(topic: string, nodes: MinimalNode[], 
       }]->(tgt)
     `, { topic, edgeList: edgeDataList });
 
-    return true;
   });
+
+  if (!isOk) {
+    const savedStrs = localStorage.getItem('sparkmap_local_saves') || '{}';
+    const saves = JSON.parse(savedStrs);
+    saves[topic] = { topic, nodes, edges, updatedAt: new Date().toISOString() };
+    localStorage.setItem('sparkmap_local_saves', JSON.stringify(saves));
+  }
+  return true;
 }
 
 /**
@@ -154,6 +161,15 @@ export async function getRecentMindmaps(): Promise<{topic: string, updatedAt: st
       updatedAt: r.get('updatedAt')
     }));
   });
+
+  if (!res) {
+    const savedStrs = localStorage.getItem('sparkmap_local_saves') || '{}';
+    const saves = JSON.parse(savedStrs);
+    const list = Object.values(saves).map((s: any) => ({ topic: String(s.topic), updatedAt: String(s.updatedAt) }));
+    list.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+    return list.slice(0, 15);
+  }
+
   return res || [];
 }
 
@@ -161,7 +177,7 @@ export async function getRecentMindmaps(): Promise<{topic: string, updatedAt: st
  * Hydrates a pure React Flow state from Neo4j.
  */
 export async function loadMindmapFromNeo4j(topic: string): Promise<{nodes: MinimalNode[], edges: MinimalEdge[]} | null> {
-  return await withSession(async (session) => {
+  const res = await withSession(async (session) => {
     const nodeRes = await session.run(`
       MATCH (m:Mindmap {topic: $topic})-[:CONTAINS_NODE]->(n:UI_Node)
       RETURN n
@@ -197,13 +213,21 @@ export async function loadMindmapFromNeo4j(topic: string): Promise<{nodes: Minim
 
     return { nodes, edges };
   });
+
+  if (!res) {
+    const savedStrs = localStorage.getItem('sparkmap_local_saves') || '{}';
+    const saves = JSON.parse(savedStrs);
+    if (saves[topic]) return saves[topic];
+    return null;
+  }
+  return res;
 }
 
 /**
  * Saves chat history for a given topic.
  */
 export async function saveChatToNeo4j(topic: string, messages: ChatMessage[]) {
-  return await withSession(async (session) => {
+  const isOk = await withSession(async (session) => {
     await session.run(`
       MATCH (m:Mindmap {topic: $topic})-[:HAS_MESSAGE]->(msg:Message)
       DETACH DELETE msg
@@ -232,6 +256,13 @@ export async function saveChatToNeo4j(topic: string, messages: ChatMessage[]) {
 
     return true;
   });
+
+  if (!isOk) {
+    const chats = JSON.parse(localStorage.getItem('sparkmap_local_chats') || '{}');
+    chats[topic] = messages;
+    localStorage.setItem('sparkmap_local_chats', JSON.stringify(chats));
+  }
+  return true;
 }
 
 /**
@@ -255,5 +286,11 @@ export async function loadChatFromNeo4j(topic: string): Promise<ChatMessage[]> {
       };
     });
   });
+  
+  if (!res) {
+    const chats = JSON.parse(localStorage.getItem('sparkmap_local_chats') || '{}');
+    return chats[topic] || [];
+  }
+  
   return res || [];
 }
