@@ -17,8 +17,11 @@ export interface Flashcard {
 export interface NodeData extends Record<string, unknown> {
   label: string;
   chunkId: string;
+  description?: string;
   flashcard?: Flashcard;
   isGroup?: boolean;
+  isRoot?: boolean;
+  isHub?: boolean;
   clusterLabel?: string;
 }
 

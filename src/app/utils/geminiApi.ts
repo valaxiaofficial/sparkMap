@@ -1,8 +1,5 @@
 import { Chunk, Flashcard, ChatMessage } from '../store/useStore';
-import { projectId, publicAnonKey } from '../../../utils/supabase/info';
 import { GoogleGenAI } from '@google/genai';
-
-const API_BASE = `https://${projectId}.supabase.co/functions/v1/make-server-edd888a5/api`;
 
 // ─── New @google/genai SDK ────────────────────────────────────────────────────
 // Uses the updated API as per https://ai.google.dev/gemini-api/docs/api-key#provide-api-key-explicitly
@@ -44,102 +41,42 @@ async function embedText(text: string): Promise<number[]> {
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function embedChunks(chunks: Chunk[]): Promise<Chunk[]> {
-  try {
-    const response = await fetch(`${API_BASE}/embed`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`
-      },
-      body: JSON.stringify({ texts: chunks.map(c => c.text) })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate embeddings via API');
-    }
-
-    const { embeddings } = await response.json();
-    return chunks.map((chunk, i) => ({
-      ...chunk,
-      embedding: embeddings[i]
-    }));
-  } catch (error) {
-    console.warn('Backend API failed, falling back to local Gemini SDK for embedChunks', error);
-    const embeddings = await Promise.all(
-      chunks.map(chunk => embedText(chunk.text))
-    );
-    return chunks.map((chunk, i) => ({
-      ...chunk,
-      embedding: embeddings[i]
-    }));
-  }
+  const embeddings = await Promise.all(
+    chunks.map(chunk => embedText(chunk.text))
+  );
+  return chunks.map((chunk, i) => ({
+    ...chunk,
+    embedding: embeddings[i]
+  }));
 }
 
 export async function generateClusterLabel(chunkTexts: string[]): Promise<string> {
   try {
-    const response = await fetch(`${API_BASE}/generate-label`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`
-      },
-      body: JSON.stringify({ texts: chunkTexts })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate label via API');
-    }
-
-    const { label } = await response.json();
-    return label;
+    const combinedText = chunkTexts.join('\n\n');
+    const prompt = `Based on the following text excerpts from an academic document, generate a concise 2-4 word label that captures the main concept or theme. Be specific and academic in tone.\n\nText excerpts:\n${combinedText.slice(0, 2000)}\n\nLabel:`;
+    return (await generateText(prompt)).trim().replace(/['"]/g, '');
   } catch (error) {
-    console.warn('Backend API failed, falling back to local Gemini SDK for generateClusterLabel', error);
-    try {
-      const combinedText = chunkTexts.join('\n\n');
-      const prompt = `Based on the following text excerpts from an academic document, generate a concise 2-4 word label that captures the main concept or theme. Be specific and academic in tone.\n\nText excerpts:\n${combinedText.slice(0, 2000)}\n\nLabel:`;
-      return (await generateText(prompt)).trim().replace(/['"]/g, '');
-    } catch (fallbackError) {
-      console.error('Local fallback label generation error:', fallbackError);
-      return 'Concept Group';
-    }
+    console.error('Local fallback label generation error:', error);
+    return 'Concept Group';
   }
 }
 
 export async function generateFlashcard(chunkText: string): Promise<Flashcard> {
   try {
-    const response = await fetch(`${API_BASE}/generate-flashcard`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`
-      },
-      body: JSON.stringify({ text: chunkText })
-    });
+    const prompt = `Based on this text from an academic document, create a study flashcard with one focused question and a clear, concise answer.\n\nText:\n${chunkText.slice(0, 1000)}\n\nRespond in JSON format:\n{\n  "question": "your question here",\n  "answer": "your answer here"\n}`;
+    const responseText = (await generateText(prompt)).trim();
 
-    if (!response.ok) {
-      throw new Error('Failed to generate flashcard via API');
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
     }
-
-    const { flashcard } = await response.json();
-    return flashcard;
   } catch (error) {
-    console.warn('Backend API failed, falling back to local Gemini SDK for generateFlashcard', error);
-    try {
-      const prompt = `Based on this text from an academic document, create a study flashcard with one focused question and a clear, concise answer.\n\nText:\n${chunkText.slice(0, 1000)}\n\nRespond in JSON format:\n{\n  "question": "your question here",\n  "answer": "your answer here"\n}`;
-      const responseText = (await generateText(prompt)).trim();
-
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-    } catch (fallbackError) {
-      console.error('Local fallback flashcard generation error:', fallbackError);
-    }
-    return {
-      question: 'What is the main concept?',
-      answer: chunkText.slice(0, 200) + '...'
-    };
+    console.error('Local flashcard generation error:', error);
   }
+  return {
+    question: 'What is the main concept?',
+    answer: chunkText.slice(0, 200) + '...'
+  };
 }
 
 export async function chatWithRAG(
@@ -149,126 +86,87 @@ export async function chatWithRAG(
   history?: ChatMessage[]
 ): Promise<string> {
   try {
-    const response = await fetch(`${API_BASE}/chat`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`
-      },
-      body: JSON.stringify({
-        query,
-        context: contextChunks.map(c => c.text),
-        topic,
-        history: history?.map(m => ({ role: m.role, content: m.content }))
-      })
-    });
+    const contextText = contextChunks.map(c => c.text).join('\n\n');
 
-    if (!response.ok) {
-      throw new Error('Failed to get chat response via API');
-    }
+    const historyText = history && history.length > 0
+      ? history
+          .map(m => `${m.role === 'user' ? 'Student' : 'Mentor'}: ${m.content}`)
+          .join('\n')
+      : '';
 
-    const { answer } = await response.json();
-    return answer;
+    const topicLine = topic ? `The student is currently studying: **${topic}**.` : '';
+
+    const prompt = [
+      'You are an elite academic mentor and study assistant. Your goal is to help the student master the topic they are studying.',
+      '- Always stay focused on the topic and the student\'s materials.',
+      '- Use the provided context from their study materials when relevant.',
+      '- Supplement with your own expert knowledge when needed.',
+      '- Maintain an encouraging, sophisticated, and scholarly tone.',
+      '- NEVER ask the student what topic they are studying — you already know it from context.',
+      '',
+      topicLine,
+      '',
+      contextText ? `Context from study materials:\n${contextText.slice(0, 3000)}` : '',
+      '',
+      historyText ? `Conversation so far:\n${historyText}` : '',
+      '',
+      `Student: ${query}`,
+      '',
+      'Mentor:'
+    ].filter(Boolean).join('\n');
+
+    return (await generateText(prompt)).trim();
   } catch (error) {
-    console.warn('Backend API failed, falling back to local Gemini SDK for chatWithRAG', error);
-    try {
-      const contextText = contextChunks.map(c => c.text).join('\n\n');
-
-      // Build conversation history string so the model remembers prior turns
-      const historyText = history && history.length > 0
-        ? history
-            .map(m => `${m.role === 'user' ? 'Student' : 'Mentor'}: ${m.content}`)
-            .join('\n')
-        : '';
-
-      const topicLine = topic ? `The student is currently studying: **${topic}**.` : '';
-
-      const prompt = [
-        'You are an elite academic mentor and study assistant. Your goal is to help the student master the topic they are studying.',
-        '- Always stay focused on the topic and the student\'s materials.',
-        '- Use the provided context from their study materials when relevant.',
-        '- Supplement with your own expert knowledge when needed.',
-        '- Maintain an encouraging, sophisticated, and scholarly tone.',
-        '- NEVER ask the student what topic they are studying — you already know it from context.',
-        '',
-        topicLine,
-        '',
-        contextText ? `Context from study materials:\n${contextText.slice(0, 3000)}` : '',
-        '',
-        historyText ? `Conversation so far:\n${historyText}` : '',
-        '',
-        `Student: ${query}`,
-        '',
-        'Mentor:'
-      ].filter(Boolean).join('\n');
-
-      return (await generateText(prompt)).trim();
-    } catch (fallbackError) {
-      console.error('Local fallback chat error:', fallbackError);
-      throw fallbackError;
-    }
+    console.error('Local chat error:', error);
+    throw error;
   }
 }
 
 export async function generateConceptsFromTopic(topic: string): Promise<any[]> {
   try {
-    const response = await fetch(`${API_BASE}/generate-content`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`
-      },
-      body: JSON.stringify({ topic })
-    });
+    // Generate Root Node, Sub-Title Hubs, and Flashcard Concepts formatted for Neo4j relationships.
+    const prompt = `You are a study workspace generator. Based on the topic "${topic}", create a structured knowledge map containing:
+1. One central Root Node for the main topic.
+2. Distinct Sub-title Hubs spanning the core subjects.
+3. Detailed Concepts attached to each Sub-title Hub.
 
-    if (!response.ok) {
-      throw new Error('Failed to generate study content via API');
+Respond STRICTLY in JSON format with this structure:
+{
+  "topic": "Central Domain Name",
+  "hubs": [
+    {
+      "title": "Sub-title Hub 1",
+      "concepts": [
+        {
+          "label": "Concept Label",
+          "description": "2-3 sentences of detailed academic description.",
+          "flashcard": {
+            "question": "Focused question?",
+            "answer": "Clear answer."
+          }
+        }
+      ]
     }
+  ]
+}`;
+    const responseText = (await generateText(prompt)).trim();
 
-    const { concepts } = await response.json();
-    return concepts;
+    const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    throw new Error('Failed to parse AI response into hierarchical concepts');
   } catch (error) {
-    console.warn('Backend API failed, falling back to local Gemini SDK for generateConceptsFromTopic', error);
-    try {
-      const prompt = `You are a study workspace generator. Based on the topic "${topic}", create a structured knowledge map.\nBreak the topic down into 5-8 distinct, high-level academic concepts.\nFor each concept, provide:\n1. A concise label (2-4 words).\n2. A detailed academic description (2-3 sentences).\n3. A study flashcard (one question, one answer).\n\nRespond STRICTLY in JSON format as an array of concepts:\n[\n  {\n    "label": "Concept Label",\n    "description": "Concept description here.",\n    "flashcard": {\n      "question": "Question here?",\n      "answer": "Answer here."\n    }\n  }\n]`;
-      const responseText = (await generateText(prompt)).trim();
-
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
-      }
-      throw new Error('Failed to parse AI response into JSON concepts');
-    } catch (fallbackError) {
-      console.error('Local fallback content generation error:', fallbackError);
-      throw fallbackError;
-    }
+    console.error('Local content generation error:', error);
+    throw error;
   }
 }
 
 export async function embedQuery(query: string): Promise<number[]> {
   try {
-    const response = await fetch(`${API_BASE}/embed`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${publicAnonKey}`
-      },
-      body: JSON.stringify({ texts: [query] })
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to embed query via API');
-    }
-
-    const { embeddings } = await response.json();
-    return embeddings[0];
+    return await embedText(query);
   } catch (error) {
-    console.warn('Backend API failed, falling back to local Gemini SDK for embedQuery', error);
-    try {
-      return await embedText(query);
-    } catch (fallbackError) {
-      console.error('Local fallback query embedding error:', fallbackError);
-      throw fallbackError;
-    }
+    console.error('Local query embedding error:', error);
+    throw error;
   }
 }

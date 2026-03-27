@@ -1,14 +1,42 @@
-import React from 'react';
-import { Sparkles, ArrowRight, BookOpen, Brain, Zap, Sun, Moon } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Sparkles, ArrowRight, BookOpen, Brain, Zap, Sun, Moon, History, ChevronRight } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { PDFUploader } from './PDFUploader';
 import { generateConceptsFromTopic } from '../utils/geminiApi';
+import { getRecentMindmaps, loadMindmapFromNeo4j, saveWorkspaceToNeo4j } from '../utils/neo4jdb';
 import { toast } from 'sonner';
 
 export function LaunchScreen() {
   const [prompt, setPrompt] = React.useState('');
-  const { setIsWorkspaceActive, isProcessing, setIsProcessing, setNodes, setEdges, setInitialPrompt, addChatMessage, theme, toggleTheme } = useStore();
+  const [recents, setRecents] = useState<{topic: string, updatedAt: string}[]>([]);
+  const { 
+    setIsWorkspaceActive, isProcessing, setIsProcessing, 
+    setNodes, setEdges, setInitialPrompt, addChatMessage, 
+    theme, toggleTheme 
+  } = useStore();
 
+  // Load recents from Neo4j on mount
+  useEffect(() => {
+    getRecentMindmaps().then(setRecents);
+  }, []);
+
+  const loadRecent = async (topic: string) => {
+    setIsProcessing(true);
+    try {
+      const data = await loadMindmapFromNeo4j(topic);
+      if (data) {
+        setInitialPrompt(topic);
+        setNodes(data.nodes as any);
+        setEdges(data.edges as any);
+        setIsWorkspaceActive(true);
+        toast.success(`Restored ${topic}`);
+      }
+    } catch (err) {
+      toast.error("Failed to load map.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -17,33 +45,88 @@ export function LaunchScreen() {
       setIsProcessing(true);
       
       try {
-        const concepts = await generateConceptsFromTopic(prompt);
+        const result = await generateConceptsFromTopic(prompt);
+        // Expect result: { topic, hubs: [ { title, concepts: [...] } ] }
         
-        const newNodes = concepts.map((c: any, i: number) => ({
-          id: `concept-${i}-${Date.now()}`,
+        const newNodes: any[] = [];
+        const newEdges: any[] = [];
+        const timestamp = Date.now();
+
+        // 1. Create Root Node
+        const rootId = `root-${timestamp}`;
+        newNodes.push({
+          id: rootId,
           type: 'concept',
-          position: { x: Math.cos(i) * 250 + 400, y: Math.sin(i) * 250 + 300 },
-          data: {
-            label: c.label,
-            description: c.description,
-            flashcard: c.flashcard,
-            chunkId: 'llm-generated'
-          }
-        }));
+          position: { x: 0, y: 0 },
+          data: { label: result.topic, isRoot: true, description: `Central theme for ${result.topic}`, chunkId: 'gen' }
+        });
+
+        // 2. Create Hubs and Concepts in Vector Clusters
+        result.hubs.forEach((hub: any, hubIdx: number) => {
+          const hubAngle = (hubIdx / result.hubs.length) * 2 * Math.PI;
+          const hubRadius = 450;
+          const hubX = Math.cos(hubAngle) * hubRadius;
+          const hubY = Math.sin(hubAngle) * hubRadius;
+          const hubId = `hub-${hubIdx}-${timestamp}`;
+
+          newNodes.push({
+            id: hubId,
+            type: 'concept',
+            position: { x: hubX, y: hubY },
+            data: { label: hub.title, isHub: true, description: `Core pillar of ${hub.title}`, chunkId: 'gen' }
+          });
+
+          newEdges.push({
+            id: `edge-root-hub-${hubIdx}`,
+            source: rootId,
+            target: hubId,
+            animated: true
+          });
+
+          hub.concepts.forEach((concept: any, conceptIdx: number) => {
+            const conceptAngle = hubAngle + ((conceptIdx - (hub.concepts.length / 2)) * 0.25);
+            const conceptRadius = 180;
+            const conceptX = hubX + Math.cos(conceptAngle) * conceptRadius;
+            const conceptY = hubY + Math.sin(conceptAngle) * conceptRadius;
+            const conceptId = `concept-${hubIdx}-${conceptIdx}-${timestamp}`;
+
+            newNodes.push({
+              id: conceptId,
+              type: 'concept',
+              position: { x: conceptX, y: conceptY },
+              data: { 
+                label: concept.label, 
+                description: concept.description, 
+                flashcard: concept.flashcard,
+                chunkId: 'gen'
+              }
+            });
+
+            newEdges.push({
+              id: `edge-hub-concept-${hubIdx}-${conceptIdx}`,
+              source: hubId,
+              target: conceptId
+            });
+          });
+        });
 
         setNodes(newNodes);
+        setEdges(newEdges);
         
+        // Save to Neo4j
+        await saveWorkspaceToNeo4j(prompt, newNodes, newEdges);
+
         addChatMessage({
           id: 'initial',
           role: 'assistant',
-          content: `I've mapped out the key concepts for **${prompt}**. You can explore the nodes on the canvas or ask me more specific questions!`,
+          content: `I've constructed a hierarchical mindmap for **${prompt}**. You'll find the central root connected to key sub-topic hubs, each surrounded by detailed concepts.`,
         });
         
         setIsWorkspaceActive(true);
         toast.success(`Generated workspace for ${prompt}`);
       } catch (err) {
-        toast.error("Failed to generate content. Let's start with a blank canvas.");
-        setIsWorkspaceActive(true);
+        console.error(err);
+        toast.error("Failed to generate content. Let's try again.");
       } finally {
         setIsProcessing(false);
       }
@@ -52,101 +135,121 @@ export function LaunchScreen() {
 
   return (
     <div className="launch-screen">
-      {/* Theme toggle — top right */}
-      <button
-        className="theme-toggle launch-theme-toggle"
-        onClick={toggleTheme}
-        aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
-      >
-        <span className="theme-toggle-track">
-          <span className="theme-toggle-thumb">
-            {theme === 'dark'
-              ? <Moon className="w-3 h-3" />
-              : <Sun className="w-3 h-3" />
-            }
+      {/* Sidebar: Recents */}
+      <aside className="launch-sidebar animate-in slide-in-from-left duration-500">
+        <div className="launch-sidebar-header">
+           <History className="w-4 h-4 text-primary" />
+           <span>Recent Mindmaps</span>
+        </div>
+        <div className="launch-sidebar-list">
+          {recents.length > 0 ? (
+            recents.map((item, i) => (
+              <button key={i} className="recent-item-btn" onClick={() => loadRecent(item.topic)}>
+                 <div className="recent-item-info">
+                   <strong className="recent-item-topic">{item.topic}</strong>
+                   <span className="recent-item-date">{new Date(item.updatedAt).toLocaleDateString()}</span>
+                 </div>
+                 <ChevronRight className="w-3.5 h-3.5 opacity-40 ml-auto" />
+              </button>
+            ))
+          ) : (
+            <div className="recent-empty">No recent maps found</div>
+          )}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <div className="launch-main">
+        {/* Theme toggle — top right */}
+        <button
+          className="theme-toggle launch-theme-toggle"
+          onClick={toggleTheme}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        >
+          <span className="theme-toggle-track">
+            <span className="theme-toggle-thumb">
+              {theme === 'dark'
+                ? <Moon className="w-3 h-3" />
+                : <Sun className="w-3 h-3" />
+              }
+            </span>
           </span>
-        </span>
-      </button>
+        </button>
 
-      <div className="launch-background">
-        {/* Consistent Dot Grid */}
-        <div className="canvas-welcome-dots" style={{ opacity: 0.6 }} />
-        <div className="blob blob-1"></div>
-        <div className="blob blob-2"></div>
-        <div className="blob blob-3"></div>
-      </div>
+        <div className="launch-background">
+          <div className="canvas-welcome-dots" style={{ opacity: 0.6 }} />
+          <div className="blob blob-1"></div>
+          <div className="blob blob-2"></div>
+        </div>
 
-      <div className="launch-content animate-fade-in">
-        <div className="launch-header">
-          <div className="launch-logo">
-            <Sparkles className="w-8 h-8 text-white" />
+        <div className="launch-content animate-fade-in">
+          <div className="launch-header">
+            <div className="launch-logo">
+              <Sparkles className="w-8 h-8 text-white" />
+            </div>
+            <span className="launch-brand">SparkMap AI</span>
           </div>
-          <span className="launch-brand">SparkMap AI</span>
-        </div>
 
-        <h1 className="launch-hero-title">
-          Modular thinking,<br/>
-          <span className="text-gradient">naturally structured.</span>
-        </h1>
-        
-        <p className="launch-hero-sub">
-          The elegant space for students to transform complex documents into visual knowledge.
-        </p>
+          <h1 className="launch-hero-title">
+            Visualizing knowledge,<br/>
+            <span className="text-gradient">redefined.</span>
+          </h1>
+          
+          <p className="launch-hero-sub">
+            Transform topics and documents into interactive hierarchical graphs with Neo4j-style topological search.
+          </p>
 
-        <form onSubmit={handleSubmit} className="launch-input-wrapper">
-          <input 
-            type="text" 
-            placeholder="Type a topic to explore or upload a PDF..."
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="launch-input"
-            disabled={isProcessing}
-          />
-          <button 
-            type="submit" 
-            className="launch-submit"
-            disabled={!prompt.trim() || isProcessing}
-          >
-            <ArrowRight className="w-5 h-5" />
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="launch-input-wrapper">
+            <input 
+              type="text" 
+              placeholder="Enter a topic to explore..."
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="launch-input"
+              disabled={isProcessing}
+            />
+            <button 
+              type="submit" 
+              className="launch-submit"
+              disabled={!prompt.trim() || isProcessing}
+            >
+              <ArrowRight className="w-5 h-5" />
+            </button>
+          </form>
 
-        <div className="launch-divider">
-          <span>OR</span>
-        </div>
+          <div className="launch-divider">
+            <span>OR UPLOAD</span>
+          </div>
 
-        <div className="flex justify-center mb-12">
-          <PDFUploader />
-        </div>
+          <div className="flex justify-center mb-12">
+            <PDFUploader />
+          </div>
 
-        <div className="launch-features">
-          <div className="feature-card">
-            <div className="feature-icon bg-sage"><BookOpen className="w-4 h-4" /></div>
-            <div className="feature-text">
-              <strong>PDF to Nodes</strong>
-              <span>Semantic chunking</span>
+          <div className="launch-features">
+            <div className="feature-card">
+              <div className="feature-icon bg-sage"><History className="w-4 h-4" /></div>
+              <div className="feature-text">
+                <strong>History</strong>
+                <span>Persistent Neo4j storage</span>
+              </div>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon bg-earth"><Brain className="w-4 h-4" /></div>
+              <div className="feature-text">
+                <strong>Vector Graph</strong>
+                <span>Hierarchical clusters</span>
+              </div>
+            </div>
+            <div className="feature-card">
+              <div className="feature-icon bg-water"><Zap className="w-4 h-4" /></div>
+              <div className="feature-text">
+                <strong>Semantic AI</strong>
+                <span>Figma-responsive view</span>
+              </div>
             </div>
           </div>
-          <div className="feature-card">
-            <div className="feature-icon bg-earth"><Brain className="w-4 h-4" /></div>
-            <div className="feature-text">
-              <strong>Smart Clusters</strong>
-              <span>AI logical grouping</span>
-            </div>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon bg-water"><Zap className="w-4 h-4" /></div>
-            <div className="feature-text">
-              <strong>Instant Insight</strong>
-              <span>Flashcards & Chat</span>
-            </div>
-          </div>
         </div>
-      </div>
-      
-      <div className="launch-footer">
-        © 2026 SparkMap AI • Nature-inspired Study Workspace
       </div>
     </div>
   );

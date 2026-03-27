@@ -45,12 +45,12 @@
   --sc-primary-light: rgba(132, 165, 157, 0.12);
   --sc-primary-glow: rgba(132, 165, 157, 0.2);
 
-  /* Borders & Radius */
+  /* Borders & Radius - Pixel OS (Material 3) */
   --sc-border: #e9ecef;
   --sc-border-light: #f1f3f5;
-  --sc-radius-xl: 32px;
-  --sc-radius-lg: 24px;
-  --sc-radius-md: 16px;
+  --sc-radius-xl: 36px;
+  --sc-radius-lg: 32px;
+  --sc-radius-md: 24px;
 
   /* Canvas background — desaturated and clean */
   --sc-canvas-bg:        #fcfdfd;
@@ -79,22 +79,77 @@ body {
 }
 
 /* ============================================================
-   Three-Panel Layout Shell
+   Flexible App Layout Shell (Pixel OS redesign)
    ============================================================ */
 .app-shell {
-  display: grid;
-  grid-template-columns: 280px 1fr 320px;
-  grid-template-rows: 64px 1fr;
+  display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
   background: var(--sc-canvas-bg);
+}
+
+.app-workspace-body {
+  flex: 1;
+  display: flex;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Custom Resize Handle for React Resizable Panels */
+.custom-resize-handle {
+  width: 12px;
+  background: transparent;
+  cursor: col-resize;
+  position: relative;
+  transition: background 0.3s cubic-bezier(0.2, 0, 0, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.custom-resize-handle::after {
+  content: "";
+  height: 30px;
+  width: 4px;
+  background-color: var(--sc-border);
+  border-radius: 4px;
+  transition: background-color 0.3s cubic-bezier(0.2, 0, 0, 1), transform 0.3s ease;
+}
+
+.custom-resize-handle:hover::after,
+.custom-resize-handle[data-resize-handle-active="true"]::after {
+  background-color: var(--sc-primary);
+  transform: scaleY(1.5);
+}
+
+.panel-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--sc-text-secondary);
+  border: none;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.panel-toggle-btn:hover {
+  background: var(--sc-primary-light);
+  color: var(--sc-primary);
+  transform: scale(1.05);
 }
 
 /* ============================================================
    Top Header Bar — Mixboard style
    ============================================================ */
 .header {
-  grid-column: 1 / -1;
+  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.8);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -102,10 +157,10 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24px;
+  padding: 0 16px;
   height: 64px;
   z-index: 800;
-  min-width: fit-content;
+  width: 100%;
 }
 
 .header-brand {
@@ -1343,4 +1398,245 @@ body {
 
 .animate-slide-up {
   animation: slide-up 0.25s ease;
+}
+
+/* ============================================================
+   Pixel OS (Material 3) — Graph Node Aesthetic
+   ============================================================ */
+.rf-pixel-node {
+  background: var(--sc-surface-card);
+  border: 1px solid var(--sc-border-light);
+  border-radius: var(--sc-radius-md);
+  box-shadow: var(--sc-shadow-md);
+  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  cursor: grab;
+  position: relative;
+  min-width: 60px;
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+}
+
+.rf-pixel-node:hover {
+  box-shadow: var(--sc-shadow-lg);
+  transform: translateY(-2px);
+  border-color: var(--sc-primary);
+}
+
+.rf-pixel-node.selected {
+  outline: 2px solid var(--sc-primary);
+  outline-offset: 4px;
+}
+
+/* State: Dot (Topology view) */
+.node-dot {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--sc-primary);
+  border: 2px solid #fff;
+}
+
+.node-dot-indicator {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* State: Box (Main view) */
+.node-box {
+  width: 240px;
+  min-height: 80px;
+  padding: 16px;
+  border-radius: var(--sc-radius-md);
+}
+
+.node-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.node-icon-root { width: 32px; height: 32px; border-radius: 10px; background: #FF9800; color: white; display: flex; align-items: center; justify-content: center; }
+.node-icon-hub { width: 32px; height: 32px; border-radius: 10px; background: var(--sc-primary); color: white; display: flex; align-items: center; justify-content: center; }
+.node-icon-concept { width: 32px; height: 32px; border-radius: 10px; background: var(--sc-primary-light); color: var(--sc-primary); display: flex; align-items: center; justify-content: center; }
+
+.node-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--sc-text-primary);
+  margin: 0;
+}
+
+.node-caption {
+  font-size: 13px;
+  color: var(--sc-text-secondary);
+  line-height: 1.4;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.node-divider {
+  height: 1px;
+  background: var(--sc-border-light);
+  margin: 12px 0;
+}
+
+.node-description {
+  font-size: 13px;
+  color: var(--sc-text-primary);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.node-flashcard-preview {
+  background: var(--sc-surface-hover);
+  border-radius: 12px;
+  padding: 10px;
+}
+
+.node-tag {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--sc-primary);
+  letter-spacing: 0.05em;
+  margin-bottom: 4px;
+}
+
+.node-question {
+  font-size: 12px;
+  font-weight: 500;
+  font-style: italic;
+  margin: 0;
+}
+
+/* Launch sidebar style */
+.launch-sidebar {
+  width: 280px;
+  background: var(--sc-surface-panel);
+  border-right: 1px solid var(--sc-border-light);
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  z-index: 100;
+}
+
+.launch-sidebar-header {
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 14px;
+  border-bottom: 1px solid var(--sc-border-light);
+}
+
+.launch-sidebar-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.recent-item-btn {
+  display: flex;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: 16px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.2s ease;
+}
+
+.recent-item-btn:hover {
+  background: var(--sc-surface-hover);
+}
+
+.recent-item-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.recent-item-topic {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--sc-text-primary);
+}
+
+.recent-item-date {
+  font-size: 11px;
+  color: var(--sc-text-secondary);
+}
+
+.launch-main {
+  flex: 1;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Canvas Viewport Controls */
+.canvas-controls-group {
+  position: absolute;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  align-items: flex-end;
+}
+
+.canvas-control-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+  background: var(--sc-surface-card);
+  border: 1px solid var(--sc-border-light);
+  box-shadow: var(--sc-shadow-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--sc-text-primary);
+  transition: all 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+
+.canvas-control-btn:hover {
+  background: var(--sc-primary-light);
+  color: var(--sc-primary);
+  transform: scale(1.05);
+  box-shadow: var(--sc-shadow-lg);
+}
+
+.canvas-scale-indicator {
+  background: var(--sc-surface-card);
+  padding: 6px 14px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sc-text-secondary);
+  border: 1px solid var(--sc-border-light);
+  box-shadow: var(--sc-shadow-sm);
+}
+
+.rf-handle-hidden {
+  opacity: 0 !important;
+  pointer-events: none !important;
 }
