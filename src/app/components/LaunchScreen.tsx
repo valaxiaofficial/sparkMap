@@ -1,5 +1,9 @@
-import React, { useEffect } from 'react';
-import { Sparkles, ArrowRight, BookOpen, Brain, Zap, Sun, Moon, History } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { 
+  Sparkles, ArrowRight, BookOpen, Brain, Zap, Sun, Moon, History, 
+  Plus, Search, Settings, PanelLeftClose, PanelLeftOpen,
+  LayoutGrid, FileText, Code2, User
+} from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { PDFUploader } from './PDFUploader';
 import { generateConceptsFromTopic } from '../utils/geminiApi';
@@ -8,11 +12,42 @@ import { toast } from 'sonner';
 
 export function LaunchScreen() {
   const [prompt, setPrompt] = React.useState('');
+  const [recents, setRecents] = useState<{topic: string, updatedAt: string}[]>([]);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { 
     setIsWorkspaceActive, isProcessing, setIsProcessing, 
     setNodes, setEdges, setInitialPrompt, addChatMessage, 
     theme, toggleTheme 
   } = useStore();
+
+  // Load recents from Neo4j on mount
+  useEffect(() => {
+    getRecentMindmaps().then(setRecents);
+  }, []);
+
+  const loadRecent = async (topic: string) => {
+    setIsProcessing(true);
+    try {
+      const data = await loadMindmapFromNeo4j(topic);
+      if (data) {
+        setInitialPrompt(topic);
+        setNodes(data.nodes as any);
+        setEdges(data.edges as any);
+        setIsWorkspaceActive(true);
+        toast.success(`Restored ${topic}`);
+      }
+    } catch (err) {
+      toast.error("Failed to load map.");
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const startNew = () => {
+    setPrompt('');
+    setInitialPrompt('');
+    setIsWorkspaceActive(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +146,75 @@ export function LaunchScreen() {
 
   return (
     <div className="launch-screen">
+      {/* Sidebar Toggle Button (Floating when collapsed) */}
+      <button 
+        className={`sidebar-toggle-btn ${!isSidebarCollapsed ? 'sidebar-open' : ''}`}
+        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+      >
+        {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+      </button>
+
+      {/* Claude-style Sidebar */}
+      <aside className={`launch-sidebar-claude ${isSidebarCollapsed ? 'collapsed' : ''}`}>
+        <div className="sidebar-header">
+          <div className="sidebar-logo-link">
+            <Sparkles className="w-5 h-5 text-primary" />
+            <span>SparkMap AI</span>
+          </div>
+        </div>
+
+        <div className="sidebar-nav">
+          <button className="sidebar-item sidebar-item-new" onClick={startNew}>
+            <Plus size={16} />
+            <span>New mindmap</span>
+          </button>
+
+          <button className="sidebar-item">
+            <Search size={16} />
+            <span>Search</span>
+          </button>
+
+          <button className="sidebar-item">
+            <Settings size={16} />
+            <span>Customize</span>
+          </button>
+
+          <div className="sidebar-section-title">Starred</div>
+          <div className="sidebar-item">
+            <span>Graph Architecture</span>
+          </div>
+
+          <div className="sidebar-section-title">Recents</div>
+          {recents.length > 0 ? (
+            recents.map((item, i) => (
+              <button key={i} className="sidebar-item" onClick={() => loadRecent(item.topic)}>
+                <span className="truncate">{item.topic}</span>
+              </button>
+            ))
+          ) : (
+            <div style={{ padding: '8px 12px', fontSize: '12px', color: 'var(--sc-text-muted)' }}>
+              No recent maps found
+            </div>
+          )}
+
+          <div className="sidebar-section-title">Collections</div>
+          <button className="sidebar-item"><LayoutGrid size={16} /> Projects</button>
+          <button className="sidebar-item"><FileText size={16} /> Artifacts</button>
+          <button className="sidebar-item"><Code2 size={16} /> Code</button>
+        </div>
+
+        <div className="sidebar-footer">
+          <div className="user-profile">
+            <div className="user-avatar">X</div>
+            <div className="user-info">
+              <span className="user-name">Xyaa</span>
+              <span className="user-plan">Pro Plan (Pixel OS)</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
       {/* Main Content */}
       <div className="launch-main">
         {/* Theme toggle — top right */}
