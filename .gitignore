@@ -23,5 +23,6 @@ dist/
 # Vite
 *.log
 
-prompt-map
-Mind-Map-Wizard
+# Submodules/External Folders (removed from git index to fix Netlify)
+/prompt-map/
+/Mind-Map-Wizard/
