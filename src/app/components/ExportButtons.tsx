@@ -1,7 +1,7 @@
 import React from 'react';
 import { Download, Image, FileText, ChevronDown } from 'lucide-react';
 import { useStore } from '../store/useStore';
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import jsPDF from 'jspdf';
 import { toast } from 'sonner';
 
@@ -26,34 +26,55 @@ export function ExportButtons() {
     setShowMenu(false);
     setIsExporting(true);
     try {
-      const canvasElement = document.querySelector('.react-flow') as HTMLElement;
-      if (!canvasElement) {
+      // Target the ReactFlow viewport — this contains all nodes and edges
+      const flowElement = document.querySelector('.react-flow__viewport') as HTMLElement;
+      const wrapperElement = document.querySelector('.react-flow') as HTMLElement;
+
+      if (!flowElement || !wrapperElement) {
         toast.error('Canvas not found');
         return;
       }
-      
-      const canvas = await html2canvas(canvasElement, {
-        backgroundColor: '#e3e3e3',
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        foreignObjectRendering: true,
-        logging: false
+
+      const wrapperRect = wrapperElement.getBoundingClientRect();
+
+      const dataUrl = await toPng(wrapperElement, {
+        backgroundColor: '#1A1A17',    // match canvas dark bg
+        width: wrapperRect.width,
+        height: wrapperRect.height,
+        pixelRatio: 2,                 // retina quality
+        style: {
+          // ensure the element renders at its actual on-screen position
+          transform: 'none',
+        },
+        filter: (node) => {
+          // Skip ReactFlow controls and attribution that we don't want in export
+          if (node instanceof HTMLElement) {
+            if (
+              node.classList?.contains('react-flow__controls') ||
+              node.classList?.contains('canvas-controls-group') ||
+              node.classList?.contains('react-flow__attribution')
+            ) {
+              return false;
+            }
+          }
+          return true;
+        },
       });
-      
+
       const link = document.createElement('a');
       link.download = 'sparkmap-canvas.png';
-      link.href = canvas.toDataURL('image/png', 1.0);
+      link.href = dataUrl;
       link.click();
-      
-      toast.success('Canvas exported as PNG');
+
+      toast.success('Canvas exported as PNG ✓');
     } catch (error) {
       console.error('Export error:', error);
-      toast.error('Failed to export canvas');
+      toast.error('Export failed — check console for details');
     } finally {
       setIsExporting(false);
     }
   };
+
   
   const exportFlashcardsAsPDF = () => {
     setShowMenu(false);
