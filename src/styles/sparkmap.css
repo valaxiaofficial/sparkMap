@@ -1464,33 +1464,24 @@ body {
 .theme-hub-3 .node-caption { color: rgba(255, 255, 255, 0.8) !important; }
 .theme-hub-3 .node-title { color: white !important; }
 
-/* PALETTE: Leaf Nodes (3 versions) */
-.theme-leaf-1 { background: rgba(69, 123, 157, 0.12) !important; border-color: rgba(69, 123, 157, 0.4) !important; }
-.theme-leaf-1 .node-icon-concept { background: rgba(69, 123, 157, 0.2); color: #457B9D; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-.theme-leaf-1.node-dot { background: rgba(69, 123, 157, 0.6) !important; border-color: rgba(69, 123, 157, 1) !important; }
-.theme-leaf-1 .node-title { color: #2B4E63 !important; }
-.theme-leaf-1 .node-caption { color: #457B9D !important; }
-.dark .theme-leaf-1 .node-icon-concept { color: #A8DADC; }
-.dark .theme-leaf-1 .node-title { color: #F1FAEE !important; }
-.dark .theme-leaf-1 .node-caption { color: #A8DADC !important; }
+/* PALETTE: Leaf Nodes (3 versions) — high opacity for readable text */
+.theme-leaf-1 { background: rgba(69, 123, 157, 0.88) !important; border-color: rgba(69, 123, 157, 0.7) !important; }
+.theme-leaf-1 .node-icon-concept { background: rgba(255,255,255,0.18); color: #E8F4FD; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.theme-leaf-1.node-dot { background: rgba(69, 123, 157, 0.9) !important; border-color: rgba(255,255,255,0.8) !important; }
+.theme-leaf-1 .node-title { color: #F1FAEE !important; }
+.theme-leaf-1 .node-caption { color: rgba(241, 250, 238, 0.8) !important; }
 
-.theme-leaf-2 { background: rgba(109, 89, 122, 0.12) !important; border-color: rgba(109, 89, 122, 0.4) !important; }
-.theme-leaf-2 .node-icon-concept { background: rgba(109, 89, 122, 0.2); color: #6D597A; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-.theme-leaf-2.node-dot { background: rgba(109, 89, 122, 0.6) !important; border-color: rgba(109, 89, 122, 1) !important; }
-.theme-leaf-2 .node-title { color: #42364A !important; }
-.theme-leaf-2 .node-caption { color: #6D597A !important; }
-.dark .theme-leaf-2 .node-icon-concept { color: #B5A1C2; }
-.dark .theme-leaf-2 .node-title { color: #F4EEF7 !important; }
-.dark .theme-leaf-2 .node-caption { color: #B5A1C2 !important; }
+.theme-leaf-2 { background: rgba(109, 89, 122, 0.88) !important; border-color: rgba(109, 89, 122, 0.7) !important; }
+.theme-leaf-2 .node-icon-concept { background: rgba(255,255,255,0.18); color: #F4EEF7; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.theme-leaf-2.node-dot { background: rgba(109, 89, 122, 0.9) !important; border-color: rgba(255,255,255,0.8) !important; }
+.theme-leaf-2 .node-title { color: #F4EEF7 !important; }
+.theme-leaf-2 .node-caption { color: rgba(244, 238, 247, 0.8) !important; }
 
-.theme-leaf-3 { background: rgba(224, 122, 95, 0.12) !important; border-color: rgba(224, 122, 95, 0.4) !important; }
-.theme-leaf-3 .node-icon-concept { background: rgba(224, 122, 95, 0.2); color: #E07A5F; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
-.theme-leaf-3.node-dot { background: rgba(224, 122, 95, 0.6) !important; border-color: rgba(224, 122, 95, 1) !important; }
-.theme-leaf-3 .node-title { color: #8A4633 !important; }
-.theme-leaf-3 .node-caption { color: #E07A5F !important; }
-.dark .theme-leaf-3 .node-icon-concept { color: #F2CCB1; }
-.dark .theme-leaf-3 .node-title { color: #FEF6F3 !important; }
-.dark .theme-leaf-3 .node-caption { color: #F2CCB1 !important; }
+.theme-leaf-3 { background: rgba(224, 122, 95, 0.88) !important; border-color: rgba(224, 122, 95, 0.7) !important; }
+.theme-leaf-3 .node-icon-concept { background: rgba(255,255,255,0.18); color: #FEF6F3; width: 32px; height: 32px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+.theme-leaf-3.node-dot { background: rgba(224, 122, 95, 0.9) !important; border-color: rgba(255,255,255,0.8) !important; }
+.theme-leaf-3 .node-title { color: #FEF6F3 !important; }
+.theme-leaf-3 .node-caption { color: rgba(254, 246, 243, 0.8) !important; }
 
 .rf-pixel-node:hover {
   box-shadow: var(--sc-shadow-lg);
