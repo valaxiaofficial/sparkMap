@@ -61,7 +61,7 @@ export function LeftPanel() {
               </div>
               <div>
                 <p className="text-[13px] font-bold text-[var(--sc-blue-text)] mb-1">
-                  Properties Observer
+                  Topic Focus View
                 </p>
                 <p className="text-[11px] text-[var(--sc-text-muted)] leading-relaxed font-medium">
                   Select any node in the tree or on the canvas to inspect its details and flashcards.
@@ -90,17 +90,8 @@ export function LeftPanel() {
                     <Tag size={12} className="text-[var(--sc-primary)]" />
                     Instance Label
                   </div>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={editedLabel}
-                      onChange={e => setEditedLabel(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && handleUpdateLabel()}
-                      className="property-input flex-1"
-                    />
-                    <button onClick={handleUpdateLabel} className="btn-action bg-[var(--sc-primary)] text-white hover:opacity-90">
-                      Save
-                    </button>
+                  <div className="text-[16px] font-bold text-[var(--sc-text-primary)] leading-tight">
+                    {selectedNode.data.label}
                   </div>
                 </div>
 
@@ -133,10 +124,10 @@ export function LeftPanel() {
                     <button
                       onClick={handleRegenerateFlashcard}
                       disabled={isRegenerating}
-                      className="btn-action w-full mt-2"
+                      className="btn-action w-full mt-2 bg-[var(--sc-surface-panel)] border-[var(--sc-border-light)] text-[11px] font-bold"
                     >
-                      <RefreshCw size={12} className={isRegenerating ? 'animate-spin' : ''} />
-                      Regenerate
+                      <RefreshCw size={11} className={isRegenerating ? 'animate-spin' : ''} />
+                      Refine Knowledge Base
                     </button>
                   </div>
                 ) : (

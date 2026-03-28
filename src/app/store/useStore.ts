@@ -58,8 +58,8 @@ interface StoreState {
   setSelectedNodeId: (id: string | null) => void;
   
   // Layout mode
-  layoutMode: 'physics' | 'topDown';
-  setLayoutMode: (mode: 'physics' | 'topDown') => void;
+  layoutMode: 'physics' | 'topDown' | 'leftToRight' | 'symmetric';
+  setLayoutMode: (mode: 'physics' | 'topDown' | 'leftToRight' | 'symmetric') => void;
   
   // Chat
   chatMessages: ChatMessage[];
@@ -98,6 +98,16 @@ interface StoreState {
   isSimulating: boolean;
   setIsSimulating: (isSim: boolean) => void;
   toggleSimulation: () => void;
+
+  // Tour / Navigation
+  isTourActive: boolean;
+  tourIndex: number;
+  tourNodeIds: string[];
+  startTour: (nodeIds: string[]) => void;
+  stopTour: () => void;
+  nextTourNode: () => void;
+  prevTourNode: () => void;
+  toggleNodeChildren: (nodeId: string) => void;
 }
 
 export const useStore = create<StoreState>((set) => ({
@@ -162,5 +172,45 @@ export const useStore = create<StoreState>((set) => ({
 
   isSimulating: false,
   setIsSimulating: (isSim) => set({ isSimulating: isSim }),
-  toggleSimulation: () => set((state) => ({ isSimulating: !state.isSimulating }))
+  toggleSimulation: () => set((state) => ({ isSimulating: !state.isSimulating })),
+
+  isTourActive: false,
+  tourIndex: 0,
+  tourNodeIds: [],
+  startTour: (nodeIds) => set({ isTourActive: true, tourIndex: 0, tourNodeIds: nodeIds, selectedNodeId: nodeIds[0] }),
+  stopTour: () => set({ isTourActive: false, tourIndex: 0, tourNodeIds: [], selectedNodeId: null }),
+  nextTourNode: () => set((state) => {
+    const nextIdx = Math.min(state.tourIndex + 1, state.tourNodeIds.length - 1);
+    return { 
+      tourIndex: nextIdx, 
+      selectedNodeId: state.tourNodeIds[nextIdx] 
+    };
+  }),
+  prevTourNode: () => set((state) => {
+    const prevIdx = Math.max(state.tourIndex - 1, 0);
+    return { 
+      prevIdx: prevIdx, 
+      tourIndex: prevIdx,
+      selectedNodeId: state.tourNodeIds[prevIdx] 
+    };
+  }),
+  toggleNodeChildren: (nodeId) => set((state) => {
+    const descendants = new Set<string>();
+    const stack = [nodeId];
+    while (stack.length > 0) {
+      const currentId = stack.pop()!;
+      state.edges.forEach(edge => {
+        if (edge.source === currentId && !descendants.has(edge.target)) {
+          descendants.add(edge.target);
+          stack.push(edge.target);
+        }
+      });
+    }
+    const targetNode = state.nodes.find(n => descendants.has(n.id));
+    const shouldHide = targetNode ? !targetNode.hidden : true;
+    return {
+      nodes: state.nodes.map(n => descendants.has(n.id) ? { ...n, hidden: shouldHide } : n),
+      edges: state.edges.map(e => (descendants.has(e.source) || descendants.has(e.target)) ? { ...e, hidden: shouldHide } : e)
+    };
+  })
 }));

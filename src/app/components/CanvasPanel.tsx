@@ -20,17 +20,21 @@ import { usePhysicsSimulation } from '../hooks/usePhysicsSimulation';
 import { Sparkles, Upload, Plus, BookOpen, Lightbulb, StickyNote, X, RefreshCw, ArrowDownToLine, LayoutDashboard } from 'lucide-react';
 import { generateFlashcard } from '../utils/geminiApi';
 import { toast } from 'sonner';
-import { computeTopDownLayout } from '../utils/topDownLayout';
+import { computeTopDownLayout, computeHorizontalLayout, computeSymmetricLayout } from '../utils/topDownLayout';
+import { Play, ChevronLeft, ChevronRight, Pause, RotateCcw } from 'lucide-react';
 
 const nodeTypes: any = {
   concept: ConceptNode,
   group: GroupNode,
 };
 
-function ViewportTracker({ onRecenter, layoutMode, setLayoutMode }: {
+function ViewportTracker({ onRecenter, layoutMode, setLayoutMode, startTour, stopTour, isTourActive }: {
   onRecenter: () => void;
-  layoutMode: 'physics' | 'topDown';
-  setLayoutMode: (m: 'physics' | 'topDown') => void;
+  layoutMode: 'physics' | 'topDown' | 'leftToRight' | 'symmetric';
+  setLayoutMode: (m: 'physics' | 'topDown' | 'leftToRight' | 'symmetric') => void;
+  startTour: () => void;
+  stopTour: () => void;
+  isTourActive: boolean;
 }) {
   const { zoom } = useViewport();
   const [showViewMenu, setShowViewMenu] = useState(false);
@@ -44,6 +48,15 @@ function ViewportTracker({ onRecenter, layoutMode, setLayoutMode }: {
 
   return (
     <div className="canvas-controls-group">
+      {/* Tour Toggle Button */}
+      <button
+        className={`canvas-control-btn ${isTourActive ? '!bg-[var(--sc-purple)] !text-white shadow-lg' : ''}`}
+        onClick={isTourActive ? stopTour : startTour}
+        title={isTourActive ? "Stop Navigation" : "Start Guided Tour (DFS)"}
+      >
+        {isTourActive ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+      </button>
+
       {/* Recenter button */}
       <button
         className="canvas-control-btn canvas-recenter-btn"
@@ -92,6 +105,30 @@ function ViewportTracker({ onRecenter, layoutMode, setLayoutMode }: {
                 <span>Top Down (Tree)</span>
                 {layoutMode === 'topDown' && <div className="w-1.5 h-1.5 rounded-full bg-[var(--sc-primary)] ml-auto" />}
               </button>
+              <button
+                onClick={() => { setLayoutMode('leftToRight'); setShowViewMenu(false); }}
+                className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-[8px] text-[11px] font-medium transition-all ${
+                  layoutMode === 'leftToRight'
+                    ? 'bg-[var(--sc-primary-light)] text-[var(--sc-primary)]'
+                    : 'hover:bg-[var(--sc-surface-hover)] text-[var(--sc-text-primary)]'
+                }`}
+              >
+                <LayoutDashboard className="w-3 h-3" />
+                <span>Left to Right (Markmap)</span>
+                {layoutMode === 'leftToRight' && <div className="w-1.5 h-1.5 rounded-full bg-[var(--sc-primary)] ml-auto" />}
+              </button>
+              <button
+                onClick={() => { setLayoutMode('symmetric'); setShowViewMenu(false); }}
+                className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-[8px] text-[11px] font-medium transition-all ${
+                  layoutMode === 'symmetric'
+                    ? 'bg-[var(--sc-primary-light)] text-[var(--sc-primary)]'
+                    : 'hover:bg-[var(--sc-surface-hover)] text-[var(--sc-text-primary)]'
+                }`}
+              >
+                <RefreshCw className="w-3 h-3" />
+                <span>Radial (Symmetric)</span>
+                {layoutMode === 'symmetric' && <div className="w-1.5 h-1.5 rounded-full bg-[var(--sc-primary)] ml-auto" />}
+              </button>
             </div>
           </>
         )}
@@ -120,6 +157,56 @@ function BackgroundLayer() {
   );
 }
 
+function SideDock({ selectedNodeId, nodes }: { selectedNodeId: string | null; nodes: any[] }) {
+  const { deleteNode, toggleNodeChildren, updateNode, nodes: storeNodes } = useStore();
+  const selectedNode = storeNodes.find(n => n.id === selectedNodeId);
+  
+  if (!selectedNodeId || !selectedNode) return null;
+
+  return (
+    <div className="side-dock animate-in slide-in-from-right duration-300">
+      <div className="side-dock-header">
+        <label>Selected Node</label>
+        <h3>{selectedNode.data.label}</h3>
+      </div>
+      
+      <div className="side-dock-actions">
+        <button 
+          className="dock-btn" 
+          onClick={() => toggleNodeChildren(selectedNodeId)}
+          title="Toggle branch visibility"
+        >
+          <BookOpen size={16} />
+          <span>Collapse Branch</span>
+        </button>
+        
+        <button className="dock-btn" onClick={() => {/* TODO: PIN */}}>
+          <Plus size={16} />
+          <span>Pin to Workspace</span>
+        </button>
+
+        {!selectedNode.data.flashcard && (
+          <button className="dock-btn primary" onClick={async () => {
+             const fc = await generateFlashcard(selectedNode.data.description || selectedNode.data.label);
+             updateNode(selectedNodeId, { flashcard: fc });
+             toast.success("Generated Flashcard!");
+          }}>
+            <Lightbulb size={16} />
+            <span>Generate Flashcard</span>
+          </button>
+        )}
+
+        <div className="dock-divider" />
+
+        <button className="dock-btn danger" onClick={() => deleteNode(selectedNodeId)}>
+          <X size={16} />
+          <span>Delete Node</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 interface ContextMenu {
   x: number;   // screen px
   y: number;   // screen px
@@ -134,8 +221,12 @@ interface QuickCreateModal {
 }
 
 function CanvasInner() {
-  const { nodes, edges, onNodesChange, onEdgesChange, setSelectedNodeId, setNodes, selectedNodeId, layoutMode, setLayoutMode } = useStore();
-  const { screenToFlowPosition, fitView } = useReactFlow();
+  const { 
+    nodes, edges, onNodesChange, onEdgesChange, setSelectedNodeId, setNodes, 
+    selectedNodeId, layoutMode, setLayoutMode, 
+    isTourActive, tourIndex, tourNodeIds, startTour, stopTour, nextTourNode, prevTourNode 
+  } = useStore();
+  const { screenToFlowPosition, fitView, setCenter } = useReactFlow();
   
   // Attach physics simulation — only active in physics mode
   usePhysicsSimulation();
@@ -146,20 +237,69 @@ function CanvasInner() {
   const [descInput, setDescInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
-  // Apply top-down layout when mode switches
+  // Apply layouts when mode switches
   useEffect(() => {
     if (layoutMode === 'topDown' && nodes.length > 0) {
       const arranged = computeTopDownLayout(nodes, edges, null);
       setNodes(arranged);
       setTimeout(() => fitView({ padding: 0.12, duration: 900, maxZoom: 0.52 }), 120);
+    } else if (layoutMode === 'leftToRight' && nodes.length > 0) {
+      const arranged = computeHorizontalLayout(nodes, edges);
+      setNodes(arranged);
+      setTimeout(() => fitView({ padding: 0.12, duration: 900, maxZoom: 0.52 }), 120);
+    } else if (layoutMode === 'symmetric' && nodes.length > 0) {
+      const arranged = computeSymmetricLayout(nodes, edges);
+      setNodes(arranged);
+      setTimeout(() => fitView({ padding: 0.12, duration: 900, maxZoom: 0.52 }), 120);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [layoutMode]);
+  }, [layoutMode, nodes.length, edges, setNodes, fitView]);
 
   // Recalibrate / Recenter
   const onRecenter = useCallback(() => {
     fitView({ padding: 0.1, duration: 800, maxZoom: 0.52 });
   }, [fitView]);
+
+  // Handle camera focus when tour node changes
+  useEffect(() => {
+    if (isTourActive && selectedNodeId) {
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (node) {
+        setCenter(node.position.x + 120, node.position.y + 40, { zoom: 1.5, duration: 800 });
+      }
+    }
+  }, [isTourActive, selectedNodeId, nodes, setCenter]);
+
+  const handleStartTour = () => {
+    if (nodes.length === 0) return;
+    
+    // Sort nodes by DFS order
+    const dfsIds: string[] = [];
+    const adj = new Map<string, string[]>();
+    edges.forEach(e => {
+      if(!adj.has(e.source)) adj.set(e.source, []);
+      adj.get(e.source)!.push(e.target);
+    });
+
+    const root = nodes.find(n => n.data.isRoot) || nodes[0];
+    const visited = new Set<string>();
+    
+    const dfs = (id: string) => {
+      if (visited.has(id)) return;
+      visited.add(id);
+      dfsIds.push(id);
+      (adj.get(id) || []).forEach(childId => dfs(childId));
+    };
+
+    dfs(root.id);
+    
+    // Add any disjoint nodes
+    nodes.forEach(n => {
+      if (!visited.has(n.id)) dfs(n.id);
+    });
+
+    startTour(dfsIds);
+    toast.success('Starting DFS Exploration tour');
+  };
 
   // Dynamic Edge Styling + handle routing for top-down leaf columns
   const styledEdges = useMemo(() => {
@@ -287,7 +427,7 @@ function CanvasInner() {
   }, [setSelectedNodeId]);
 
   return (
-    <div className="w-full h-full relative" ref={containerRef}>
+    <div className={`w-full h-full relative ${isTourActive ? 'tour-active' : ''}`} ref={containerRef}>
       <ReactFlow
         nodes={nodes}
         edges={styledEdges}
@@ -312,7 +452,29 @@ function CanvasInner() {
       >
         <BackgroundLayer />
         <Controls className="rf-controls" showInteractive={false} />
-        <ViewportTracker onRecenter={onRecenter} layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
+        <ViewportTracker 
+          onRecenter={onRecenter} 
+          layoutMode={layoutMode} 
+          setLayoutMode={setLayoutMode} 
+          startTour={handleStartTour}
+          stopTour={stopTour}
+          isTourActive={isTourActive}
+        />
+        <SideDock selectedNodeId={selectedNodeId} nodes={nodes} />
+        
+        {isTourActive && tourNodeIds.length > 0 && (
+          <div className="tour-progress-overlay">
+            <div className="tour-progress-bar">
+              <div 
+                className="tour-progress-fill" 
+                style={{ width: `${((tourIndex + 1) / tourNodeIds.length) * 100}%` }}
+              />
+            </div>
+            <div className="tour-info-badge">
+              Traversed {tourIndex + 1}/{tourNodeIds.length} ({Math.round(((tourIndex + 1) / tourNodeIds.length) * 100)}%)
+            </div>
+          </div>
+        )}
       </ReactFlow>
 
       {/* ── Context Menu ── */}

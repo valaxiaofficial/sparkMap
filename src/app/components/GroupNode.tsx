@@ -33,9 +33,10 @@ export function GroupNode({ data, selected }: NodeProps) {
       className={`rf-group-node ${selected ? 'selected' : ''}`}
       style={{
         background: selected
-          ? `rgba(255,255,255,0.88)`
-          : `rgba(255,255,255,0.78)`,
+          ? `rgba(255,255,255,1)`
+          : `rgba(255,255,255,0.7)`,
         borderColor: selected ? color.dot : color.border,
+        borderRadius: '500px', // Mathematical Set / Venn circle
       }}
     >
       {/* Group label */}
