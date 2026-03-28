@@ -1396,18 +1396,18 @@ body {
    ============================================================ */
 .rf-pixel-node {
   background: var(--sc-surface-card);
-  border: 1px solid var(--sc-border-light);
-  border-radius: var(--sc-radius-md);
+  border: 1.5px solid var(--sc-border-light);
+  border-radius: 40px; /* Capsule */
   box-shadow: var(--sc-shadow-md);
-  transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition: all 0.4s cubic-bezier(0.19, 1, 0.22, 1);
   cursor: grab;
   position: relative;
-  min-width: 60px;
-  min-height: 60px;
+  min-width: 140px;
+  min-height: 48px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 12px;
+  padding: 8px 16px;
   overflow: visible; /* allow hover card to extend beyond bounds */
 }
 
@@ -1589,7 +1589,6 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 8px;
 }
 
 .node-icon-root { width: 32px; height: 32px; border-radius: 10px; background: #FF9800; color: white; display: flex; align-items: center; justify-content: center; }
@@ -1740,6 +1739,16 @@ body {
 .launch-sidebar-claude.collapsed {
   width: 0;
   border-right: 0;
+  overflow: visible; /* To allow the toggle button to be seen */
+  pointer-events: auto;
+}
+
+.launch-sidebar-claude.collapsed > *:not(.sidebar-header) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.launch-sidebar-claude.collapsed .sidebar-header *:not(.sidebar-toggle-btn) {
   opacity: 0;
   pointer-events: none;
 }
@@ -1896,7 +1905,7 @@ body {
 /* Sidebar Toggle Overlay */
 .sidebar-toggle-btn {
   position: absolute;
-  left: 12px;
+  right: -42px; /* Positioned just outside the sidebar edge when collapsed */
   top: 14px;
   z-index: 1001;
   width: 34px;
@@ -1909,17 +1918,18 @@ body {
   justify-content: center;
   cursor: pointer;
   box-shadow: var(--sc-shadow-sm);
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   color: var(--sc-text-secondary);
 }
 
 .sidebar-toggle-btn:hover {
   background: var(--sc-surface-hover);
   color: var(--sc-primary);
+  border-color: var(--sc-primary-faint);
 }
 
 .sidebar-toggle-btn.sidebar-open {
-  left: 160px; /* Aligned with the sidebar logo */
+  right: 12px; /* Placed neatly inside the sidebar header when open */
   background: transparent;
   border-color: transparent;
   box-shadow: none;

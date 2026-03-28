@@ -213,22 +213,19 @@ export function LaunchScreen() {
 
   return (
     <div className="launch-screen">
-      {/* Sidebar Toggle Button (Floating when collapsed) */}
-      <button 
-        className={`sidebar-toggle-btn ${!isSidebarCollapsed ? 'sidebar-open' : ''}`}
-        onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-        title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-      >
-        {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
-      </button>
-
-      {/* Claude-style Sidebar */}
       <aside className={`launch-sidebar-claude ${isSidebarCollapsed ? 'collapsed' : ''}`}>
-        <div className="sidebar-header">
+        <div className="sidebar-header flex items-center justify-between">
           <div className="sidebar-logo-link">
             <Sparkles className="w-5 h-5 text-primary" />
             <span>SparkMap AI</span>
           </div>
+          <button 
+            className={`sidebar-toggle-btn ${!isSidebarCollapsed ? 'sidebar-open' : ''}`}
+            onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+            title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
         </div>
 
         <div className="sidebar-nav">
