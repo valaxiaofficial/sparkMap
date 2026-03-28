@@ -1422,6 +1422,12 @@ body {
   align-items: center;
   justify-content: center;
   padding: 12px;
+  overflow: visible; /* allow hover card to extend beyond bounds */
+}
+
+/* Ensure ReactFlow's node wrapper also doesn't clip absolute children */
+.react-flow__node {
+  overflow: visible !important;
 }
 
 /* PALETTE: Root Node */
@@ -1514,13 +1520,18 @@ body {
   justify-content: center;
 }
 
-/* State: Box (Main view) — NEVER grows on hover, always compact */
+/* State: Box (Main view) — overflow:visible so hover card can escape node bounds */
 .node-box {
   width: 240px;
   min-height: 80px;
-  max-height: 92px;
   padding: 16px;
   border-radius: var(--sc-radius-md);
+  overflow: visible;  /* MUST be visible — hover card is position:absolute inside */
+}
+
+/* Inner clip wrapper — constrains only the text content, not the hover card */
+.node-content-clip {
+  max-height: 76px;
   overflow: hidden;
 }
 
