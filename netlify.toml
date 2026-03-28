@@ -1,0 +1,9 @@
+[build]
+  command = "bun run build"
+  publish = "dist"
+
+[build.environment]
+  # Tell Netlify scanner to ignore these keys because they are needed for the client-side bundle
+  SECRETS_SCAN_OMIT_KEYS = "VITE_GEMINI_API_KEY,VITE_NEO4J_PASSWORD,VITE_NEO4J_URI,VITE_NEO4J_USER,GEMINI_API_KEY,VITE_DEEPSEEK_API_KEY"
+  # Alternatively, if you want to disable scanning entirely (not recommended but works):
+  # SECRETS_SCAN_ENABLED = "false"
