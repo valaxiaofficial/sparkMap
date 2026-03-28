@@ -10,7 +10,7 @@ import { DocUploader } from './DocUploader';
 import { generateConceptsFromTopic } from '../utils/geminiApi';
 import { 
   getRecentMindmaps, loadMindmapFromNeo4j, saveWorkspaceToNeo4j, 
-  loadChatFromNeo4j 
+  loadChatFromNeo4j, checkNeo4jConnection
 } from '../utils/neo4jdb';
 import { toast } from 'sonner';
 
@@ -20,6 +20,8 @@ export function LaunchScreen() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [recentsSearch, setRecentsSearch] = useState('');
   const [pinnedTopics, setPinnedTopics] = useState<string[]>([]);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [dbStatus, setDbStatus] = useState<'connected' | 'error' | 'connecting'>('connecting');
   const { 
     setIsWorkspaceActive, isProcessing, setIsProcessing, 
     setNodes, setEdges, setInitialPrompt, addChatMessage, 
@@ -28,7 +30,15 @@ export function LaunchScreen() {
 
   // Load recents and pins on mount
   useEffect(() => {
-    getRecentMindmaps().then(setRecents);
+    checkNeo4jConnection().then(isOk => {
+      setDbStatus(isOk ? 'connected' : 'error');
+      if (isOk) {
+        getRecentMindmaps().then(setRecents);
+      } else {
+        console.warn('Neo4j connection failed. Fallback to localStorage.');
+        getRecentMindmaps().then(setRecents);
+      }
+    });
     
     const savedPins = localStorage.getItem('sparkmap_pins');
     if (savedPins) setPinnedTopics(JSON.parse(savedPins));
@@ -293,12 +303,83 @@ export function LaunchScreen() {
           
           <button 
             className="p-2 rounded-lg hover:bg-[var(--sc-border-light)] transition-all text-[var(--sc-text-muted)] hover:text-[var(--sc-primary)]"
-            title="Settings"
+            title="Database Diagnostics"
+            onClick={() => setShowDiagnostics(true)}
           >
             <Settings size={20} />
           </button>
         </div>
       </aside>
+
+      {/* Database Diagnostics Overlay */}
+      {showDiagnostics && (
+        <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in duration-300">
+          <div className="bg-[var(--sc-surface-card)] border border-[var(--sc-border)] rounded-2xl shadow-2xl w-full max-w-md p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Settings className="w-5 h-5 text-[var(--sc-primary)]" />
+                System Diagnostics
+              </h3>
+              <button onClick={() => setShowDiagnostics(false)} className="p-2 hover:bg-[var(--sc-surface-hover)] rounded-full transition-colors">
+                <Plus className="w-5 h-5 rotate-45" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="p-4 bg-[var(--sc-surface-panel)] border border-[var(--sc-border-light)] rounded-xl">
+                <div className="text-[10px] uppercase font-bold tracking-widest text-[var(--sc-text-muted)] mb-2">Neo4j Connection</div>
+                <div className="flex items-center gap-3">
+                  <div className={`w-3 h-3 rounded-full ${
+                    dbStatus === 'connected' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]' : 
+                    dbStatus === 'error' ? 'bg-red-500' : 'bg-yellow-500 animate-pulse'
+                  }`} />
+                  <span className="font-medium capitalize">{dbStatus}</span>
+                </div>
+              </div>
+
+              <div className="p-4 bg-[var(--sc-surface-panel)] border border-[var(--sc-border-light)] rounded-xl">
+                <div className="text-[10px] uppercase font-bold tracking-widest text-[var(--sc-text-muted)] mb-2">Environment Config</div>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-[var(--sc-text-muted)]">URI:</span>
+                    <span className="font-mono text-[11px] max-w-[200px] truncate">
+                      {import.meta.env.VITE_NEO4J_URI || 'Using Default (localhost)'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--sc-text-muted)]">User:</span>
+                    <span className="font-mono text-[11px]">
+                      {import.meta.env.VITE_NEO4J_USER || 'Using Default'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-[var(--sc-text-muted)]">Status:</span>
+                    <span className="text-[11px]">
+                      {window.location.protocol === 'https:' ? '🔒 Secure SSL' : '🔓 Insecure HTTP'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {dbStatus === 'error' && (
+                <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-500 text-[11px] leading-relaxed">
+                  <strong>Connection Tips:</strong><br/>
+                  • Ensure your Netlify environment variables start with <code>VITE_</code><br/>
+                  • Check if your Neo4j instance whitelist allows connections from <code>{window.location.hostname}</code><br/>
+                  • Verify your URI protocol (Aura requires <code>neo4j+s://</code>)
+                </div>
+              )}
+            </div>
+
+            <button 
+              onClick={() => setShowDiagnostics(false)}
+              className="w-full mt-6 bg-[var(--sc-primary)] text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all active:scale-[0.98]"
+            >
+              Close Diagnostics
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="launch-main">

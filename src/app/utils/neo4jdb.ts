@@ -1,8 +1,8 @@
 import neo4j, { Driver, Record, Session } from 'neo4j-driver';
 
-const NEO4J_URI = (import.meta as any).env?.VITE_NEO4J_URI || 'bolt://localhost:7687';
-const NEO4J_USER = (import.meta as any).env?.VITE_NEO4J_USER || 'neo4j';
-const NEO4J_PASSWORD = (import.meta as any).env?.VITE_NEO4J_PASSWORD || 'password';
+const NEO4J_URI = import.meta.env.VITE_NEO4J_URI || 'bolt://localhost:7687';
+const NEO4J_USER = import.meta.env.VITE_NEO4J_USER || 'neo4j';
+const NEO4J_PASSWORD = import.meta.env.VITE_NEO4J_PASSWORD || 'password';
 
 let driver: Driver | null = null;
 
@@ -12,12 +12,28 @@ let driver: Driver | null = null;
 export function getDriver() {
   if (!driver) {
     try {
+      console.log('🔌 Connecting to Neo4j:', {
+        uri: NEO4J_URI,
+        user: NEO4J_USER,
+        encrypted: NEO4J_URI.includes('+s')
+      });
+
+      if (!import.meta.env.VITE_NEO4J_URI && window.location.hostname !== 'localhost') {
+        console.warn('⚠️ No VITE_NEO4J_URI found in Netlify environment variables!');
+      }
+
+      const isSecure = NEO4J_URI.includes('+s');
+
       driver = neo4j.driver(
         NEO4J_URI,
-        neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD)
+        neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD),
+        isSecure ? {} : { 
+          encrypted: 'ENCRYPTION_OFF',
+          trust: 'TRUST_ALL_CERTIFICATES'
+        }
       );
     } catch (error) {
-      console.warn('Failed to initialize Neo4j driver', error);
+      console.warn('❌ Failed to initialize Neo4j driver', error);
       return null;
     }
   }

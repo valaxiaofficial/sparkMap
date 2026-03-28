@@ -951,8 +951,10 @@ body {
   position: relative;
   z-index: 2;
   width: 100%;
-  max-width: 720px;
+  max-width: 760px;
   text-align: center;
+  padding: 40px 24px 80px;
+  margin: 0 auto;
 }
 
 .launch-header {
@@ -1893,13 +1895,13 @@ body {
 
 /* Sidebar Toggle Overlay */
 .sidebar-toggle-btn {
-  position: fixed;
-  left: 20px;
-  top: 20px;
-  z-index: 101;
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
+  position: absolute;
+  left: 12px;
+  top: 14px;
+  z-index: 1001;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
   background: var(--sc-surface-card);
   border: 1px solid var(--sc-border-light);
   display: flex;
@@ -1917,17 +1919,18 @@ body {
 }
 
 .sidebar-toggle-btn.sidebar-open {
-  left: 300px; /* Aligned with the expanded sidebar edge */
+  left: 160px; /* Aligned with the sidebar logo */
   background: transparent;
   border-color: transparent;
   box-shadow: none;
 }
 
-@media (min-width: 1200px) {
-  .sidebar-toggle-btn.sidebar-open {
-    left: 154px; /* Move inside the 200px wide sidebar */
-    top: 14px; /* Align vertically in the sidebar header */
-  }
+/* Move theme toggle so it doesn't overlap search when expanded */
+.launch-theme-toggle {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  z-index: 100;
 }
 
 .launch-main {
