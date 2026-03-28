@@ -38,6 +38,13 @@ export function usePhysicsSimulation() {
     const loop = () => {
       const currentNodes = useStore.getState().nodes;
       const currentEdges = useStore.getState().edges;
+      const currentLayoutMode = useStore.getState().layoutMode;
+
+      // Pause physics entirely when in top-down layout mode
+      if (currentLayoutMode === 'topDown') {
+        animationRef.current = requestAnimationFrame(loop);
+        return;
+      }
 
       // Stop loop when cooled completely and perfectly frame to 52% exactly as requested
       if (currentNodes.length === 0 || alphaRef.current < 0.005) {

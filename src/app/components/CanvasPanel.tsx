@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState, useMemo } from 'react';
+import React, { useCallback, useRef, useState, useMemo, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -15,28 +15,88 @@ import '@xyflow/react/dist/style.css';
 import { useStore, NodeData } from '../store/useStore';
 import { ConceptNode } from './ConceptNode';
 import { GroupNode } from './GroupNode';
-import { PDFUploader } from './PDFUploader';
+
 import { usePhysicsSimulation } from '../hooks/usePhysicsSimulation';
-import { Sparkles, Upload, Plus, BookOpen, Lightbulb, StickyNote, X } from 'lucide-react';
+import { Sparkles, Upload, Plus, BookOpen, Lightbulb, StickyNote, X, RefreshCw, ArrowDownToLine, LayoutDashboard } from 'lucide-react';
 import { generateFlashcard } from '../utils/geminiApi';
 import { toast } from 'sonner';
+import { computeTopDownLayout } from '../utils/topDownLayout';
 
 const nodeTypes: any = {
   concept: ConceptNode,
   group: GroupNode,
 };
 
-function ViewportTracker({ onRecenter }: { onRecenter: () => void }) {
+function ViewportTracker({ onRecenter, layoutMode, setLayoutMode }: {
+  onRecenter: () => void;
+  layoutMode: 'physics' | 'topDown';
+  setLayoutMode: (m: 'physics' | 'topDown') => void;
+}) {
   const { zoom } = useViewport();
+  const [showViewMenu, setShowViewMenu] = useState(false);
+  const [spinning, setSpinning] = useState(false);
+
+  const handleRecenter = () => {
+    setSpinning(true);
+    onRecenter();
+    setTimeout(() => setSpinning(false), 700);
+  };
+
   return (
     <div className="canvas-controls-group">
-      <button 
-        className="canvas-control-btn canvas-recenter-btn" 
-        onClick={onRecenter}
-        title="Recalibrate View (Focus Center)"
+      {/* Recenter button — animated reload icon */}
+      <button
+        className="canvas-control-btn canvas-recenter-btn"
+        onClick={handleRecenter}
+        title="Recenter view"
       >
-        <Sparkles className="w-3.5 h-3.5" />
+        <RefreshCw className={`w-3.5 h-3.5 transition-transform ${spinning ? 'animate-spin' : ''}`} />
       </button>
+
+      {/* View mode button */}
+      <div className="relative">
+        <button
+          className="canvas-control-btn"
+          onClick={() => setShowViewMenu(v => !v)}
+          title="Change layout view"
+        >
+          <LayoutDashboard className="w-3.5 h-3.5" />
+        </button>
+
+        {showViewMenu && (
+          <>
+            <div className="fixed inset-0 z-40" onClick={() => setShowViewMenu(false)} />
+            <div className="absolute bottom-full left-0 mb-2 w-44 bg-[var(--sc-surface-card)] border border-[var(--sc-border)] rounded-[12px] shadow-xl p-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+              <div className="px-2 py-1.5 text-[9px] font-semibold text-[var(--sc-text-muted)] uppercase tracking-wider border-b border-[var(--sc-border-light)] mb-1">View Mode</div>
+              <button
+                onClick={() => { setLayoutMode('physics'); setShowViewMenu(false); }}
+                className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-[8px] text-[11px] font-medium transition-all ${
+                  layoutMode === 'physics'
+                    ? 'bg-[var(--sc-primary-light)] text-[var(--sc-primary)]'
+                    : 'hover:bg-[var(--sc-surface-hover)] text-[var(--sc-text-primary)]'
+                }`}
+              >
+                <Sparkles className="w-3 h-3" />
+                <span>Default (Physics)</span>
+                {layoutMode === 'physics' && <div className="w-1.5 h-1.5 rounded-full bg-[var(--sc-primary)] ml-auto" />}
+              </button>
+              <button
+                onClick={() => { setLayoutMode('topDown'); setShowViewMenu(false); }}
+                className={`flex items-center gap-2 w-full px-2 py-1.5 rounded-[8px] text-[11px] font-medium transition-all ${
+                  layoutMode === 'topDown'
+                    ? 'bg-[var(--sc-primary-light)] text-[var(--sc-primary)]'
+                    : 'hover:bg-[var(--sc-surface-hover)] text-[var(--sc-text-primary)]'
+                }`}
+              >
+                <ArrowDownToLine className="w-3 h-3" />
+                <span>Top Down (Tree)</span>
+                {layoutMode === 'topDown' && <div className="w-1.5 h-1.5 rounded-full bg-[var(--sc-primary)] ml-auto" />}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+
       <div className="canvas-scale-indicator">
         {Math.round(zoom * 100)}%
       </div>
@@ -73,10 +133,10 @@ interface QuickCreateModal {
 }
 
 function CanvasInner() {
-  const { nodes, edges, onNodesChange, onEdgesChange, setSelectedNodeId, setNodes, selectedNodeId } = useStore();
+  const { nodes, edges, onNodesChange, onEdgesChange, setSelectedNodeId, setNodes, selectedNodeId, layoutMode, setLayoutMode } = useStore();
   const { screenToFlowPosition, fitView } = useReactFlow();
   
-  // Attach physics simulation (starts paused by default)
+  // Attach physics simulation — only active in physics mode
   usePhysicsSimulation();
 
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null);
@@ -85,28 +145,48 @@ function CanvasInner() {
   const [descInput, setDescInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
 
+  // Apply top-down layout when mode switches
+  useEffect(() => {
+    if (layoutMode === 'topDown' && nodes.length > 0) {
+      const arranged = computeTopDownLayout(nodes, edges, null);
+      setNodes(arranged);
+      setTimeout(() => fitView({ padding: 0.12, duration: 900, maxZoom: 0.52 }), 120);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [layoutMode]);
+
   // Recalibrate / Recenter
   const onRecenter = useCallback(() => {
     fitView({ padding: 0.1, duration: 800, maxZoom: 0.52 });
   }, [fitView]);
 
-  // Dynamic Edge Styling: Dotted by default, Solid if connected to selected node
+  // Dynamic Edge Styling + handle routing for top-down leaf columns
   const styledEdges = useMemo(() => {
+    // In topDown mode, identify leaf targets so we can route edges to their left side
+    const leafIds = layoutMode === 'topDown'
+      ? new Set(nodes.filter(n => !n.data.isRoot && !n.data.isHub).map(n => n.id))
+      : new Set<string>();
+
     return edges.map(edge => {
       const isConnected = selectedNodeId === edge.source || selectedNodeId === edge.target;
+      const isLeafTarget = leafIds.has(edge.target);
+
       return {
         ...edge,
+        // Route to left handle when leaf target in top-down mode
+        targetHandle: layoutMode === 'topDown' && isLeafTarget ? 'left' : undefined,
+        type: layoutMode === 'topDown' && isLeafTarget ? 'smoothstep' : 'default',
         animated: isConnected,
         style: {
           stroke: isConnected ? 'var(--sc-primary)' : 'var(--sc-text-muted)',
           strokeWidth: isConnected ? 2 : 1.5,
           strokeDasharray: isConnected ? '0' : '4 4',
           transition: 'all 0.3s ease',
-          opacity: isConnected ? 1 : 0.4
-        }
+          opacity: isConnected ? 1 : 0.4,
+        },
       };
     });
-  }, [edges, selectedNodeId]);
+  }, [edges, selectedNodeId, layoutMode, nodes]);
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -231,7 +311,7 @@ function CanvasInner() {
       >
         <BackgroundLayer />
         <Controls className="rf-controls" showInteractive={false} />
-        <ViewportTracker onRecenter={onRecenter} />
+        <ViewportTracker onRecenter={onRecenter} layoutMode={layoutMode} setLayoutMode={setLayoutMode} />
       </ReactFlow>
 
       {/* ── Context Menu ── */}

@@ -57,6 +57,10 @@ interface StoreState {
   selectedNodeId: string | null;
   setSelectedNodeId: (id: string | null) => void;
   
+  // Layout mode
+  layoutMode: 'physics' | 'topDown';
+  setLayoutMode: (mode: 'physics' | 'topDown') => void;
+  
   // Chat
   chatMessages: ChatMessage[];
   addChatMessage: (message: ChatMessage) => void;
@@ -110,6 +114,9 @@ export const useStore = create<StoreState>((set) => ({
   
   selectedNodeId: null,
   setSelectedNodeId: (id) => set({ selectedNodeId: id }),
+
+  layoutMode: 'physics',
+  setLayoutMode: (mode) => set({ layoutMode: mode }),
   
   chatMessages: [],
   addChatMessage: (message) => set((state) => ({

@@ -1514,12 +1514,87 @@ body {
   justify-content: center;
 }
 
-/* State: Box (Main view) */
+/* State: Box (Main view) — NEVER grows on hover, always compact */
 .node-box {
   width: 240px;
   min-height: 80px;
+  max-height: 92px;
   padding: 16px;
   border-radius: var(--sc-radius-md);
+  overflow: hidden;
+}
+
+/* ── Floating Hover Detail Card ─────────────────────────────────────────
+   Rendered as an absolutely-positioned child of rf-pixel-node.
+   Sits ABOVE all other nodes via z-index, never in the layout flow.
+   Zero overlap with siblings — this is the correct pattern for graph UIs.
+───────────────────────────────────────────────────────────────────── */
+.node-hover-card {
+  position: absolute;
+  left: calc(100% + 12px);   /* appear to the right of the node */
+  top: 0;
+  z-index: 9999;
+  width: 280px;
+  background: var(--sc-surface-card);
+  border: 1px solid var(--sc-border);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255,255,255,0.04);
+  pointer-events: none;      /* don't capture clicks */
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.node-hover-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sc-text-primary);
+  margin-bottom: 4px;
+  line-height: 1.3;
+}
+
+.node-hover-card-divider {
+  height: 1px;
+  background: var(--sc-border-light);
+  margin: 10px 0;
+}
+
+.node-hover-card-body {
+  font-size: 12.5px;
+  color: var(--sc-text-secondary);
+  line-height: 1.55;
+  margin: 0 0 10px;
+}
+
+.node-hover-card-flashcard {
+  background: var(--sc-surface-hover);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin-top: 6px;
+}
+
+.node-hover-card-tag {
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sc-primary);
+  margin-bottom: 6px;
+}
+
+.node-hover-card-question {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--sc-text-primary);
+  margin: 0 0 6px;
+  font-style: italic;
+}
+
+.node-hover-card-answer {
+  font-size: 12px;
+  color: var(--sc-text-secondary);
+  margin: 0;
+  line-height: 1.4;
 }
 
 .node-header {
