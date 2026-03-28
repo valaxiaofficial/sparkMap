@@ -44,7 +44,7 @@ function ViewportTracker({ onRecenter, layoutMode, setLayoutMode }: {
 
   return (
     <div className="canvas-controls-group">
-      {/* Recenter button — animated reload icon */}
+      {/* Recenter button */}
       <button
         className="canvas-control-btn canvas-recenter-btn"
         onClick={handleRecenter}
@@ -54,7 +54,7 @@ function ViewportTracker({ onRecenter, layoutMode, setLayoutMode }: {
       </button>
 
       {/* View mode button */}
-      <div className="relative">
+      <div style={{ position: 'relative', display: 'flex' }}>
         <button
           className="canvas-control-btn"
           onClick={() => setShowViewMenu(v => !v)}
@@ -66,7 +66,7 @@ function ViewportTracker({ onRecenter, layoutMode, setLayoutMode }: {
         {showViewMenu && (
           <>
             <div className="fixed inset-0 z-40" onClick={() => setShowViewMenu(false)} />
-            <div className="absolute bottom-full left-0 mb-2 w-44 bg-[var(--sc-surface-card)] border border-[var(--sc-border)] rounded-[12px] shadow-xl p-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="absolute bottom-full right-0 mb-2 w-44 bg-[var(--sc-surface-card)] border border-[var(--sc-border)] rounded-[12px] shadow-xl p-1 z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
               <div className="px-2 py-1.5 text-[9px] font-semibold text-[var(--sc-text-muted)] uppercase tracking-wider border-b border-[var(--sc-border-light)] mb-1">View Mode</div>
               <button
                 onClick={() => { setLayoutMode('physics'); setShowViewMenu(false); }}
@@ -97,6 +97,7 @@ function ViewportTracker({ onRecenter, layoutMode, setLayoutMode }: {
         )}
       </div>
 
+      {/* Zoom indicator */}
       <div className="canvas-scale-indicator">
         {Math.round(zoom * 100)}%
       </div>
