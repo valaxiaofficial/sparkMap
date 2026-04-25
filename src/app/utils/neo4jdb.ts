@@ -27,9 +27,11 @@ export function getDriver() {
       driver = neo4j.driver(
         NEO4J_URI,
         neo4j.auth.basic(NEO4J_USER, NEO4J_PASSWORD),
-        isSecure ? {} : { 
+        isSecure ? { maxConnectionPoolSize: 50, connectionTimeout: 5000 } : { 
           encrypted: 'ENCRYPTION_OFF',
-          trust: 'TRUST_ALL_CERTIFICATES'
+          trust: 'TRUST_ALL_CERTIFICATES',
+          maxConnectionPoolSize: 50, 
+          connectionTimeout: 5000
         }
       );
     } catch (error) {

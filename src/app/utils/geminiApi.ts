@@ -136,7 +136,7 @@ export async function generateConceptsFromTopic(topic: string): Promise<any> {
     const prompt = `You are a study workspace generator. Based on the topic "${topic}", create a structured knowledge map containing:
 1. One central Root Node for the main topic.
 2. Distinct Sub-title Hubs spanning the core subjects.
-3. Detailed Concepts attached to each Sub-title Hub (generate up to 20 comprehensive concepts per hub to fully cover the material).
+3. Detailed Concepts attached to each Sub-title Hub (generate 3-6 comprehensive concepts per hub to fully cover the material).
 
 Respond STRICTLY in JSON format with this structure:
 {

@@ -17,13 +17,19 @@ export default function App() {
   // Panel state tracking
   const leftPanelRef = useRef<ImperativePanelHandle>(null);
   const rightPanelRef = useRef<ImperativePanelHandle>(null);
-  const [leftOpen, setLeftOpen] = useState(true);
-  const [rightOpen, setRightOpen] = useState(true);
+  
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 1024;
+  const [leftOpen, setLeftOpen] = useState(!isMobile);
+  const [rightOpen, setRightOpen] = useState(!isMobile);
 
   // Apply dark class on initial mount (default = dark)
   React.useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
-  }, [theme]);
+    if (isMobile) {
+      leftPanelRef.current?.collapse();
+      rightPanelRef.current?.collapse();
+    }
+  }, [theme, isMobile]);
 
   if (!isWorkspaceActive) {
     return (
